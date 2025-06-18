@@ -1,0 +1,8 @@
+-[ipv6 : ::ffff:192.0.2.1] - 0
+
+[V4INV6]
+Expanded v4inv6 address	- 0000:0000:0000:0000:0000:ffff:192.0.2.1
+Compr. v4inv6 address	- ::ffff:192.0.2.1
+Comment			- IPv4-mapped IPv6 address
+
+-
