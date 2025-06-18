@@ -1,0 +1,11 @@
+[book]
+title = "ripcalc"
+authors = ["ripcalc contributors"]
+description = "Documentation for the ripcalc subnet calculator"
+src = "src"
+
+[build]
+create-missing = true
+
+[output.html]
+default-theme = "light"
