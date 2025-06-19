@@ -9,17 +9,17 @@ pub struct OutputFormatter {
 }
 
 impl OutputFormatter {
-    pub fn new(json_mode: bool) -> Self {
+    pub const fn new(json_mode: bool) -> Self {
         Self { json_mode }
     }
 
     pub fn format_ipv4(&self, calc: &IPv4Calculator, index: usize, config: &Config) -> Result<()> {
         if self.json_mode {
             // JSON formatting is a static function
-            OutputFormatter::format_ipv4_json(calc, index, config)
+            Self::format_ipv4_json(calc, index, config)
         } else {
             // Delegate to static text formatter and return OK
-            OutputFormatter::format_ipv4_text(calc, index, config);
+            Self::format_ipv4_text(calc, index, config);
             Ok(())
         }
     }
@@ -27,10 +27,10 @@ impl OutputFormatter {
     pub fn format_ipv6(&self, calc: &IPv6Calculator, index: usize, config: &Config) -> Result<()> {
         if self.json_mode {
             // JSON formatting as static function
-            OutputFormatter::format_ipv6_json(calc, index, config)
+            Self::format_ipv6_json(calc, index, config)
         } else {
             // Delegate to static text formatter and return OK
-            OutputFormatter::format_ipv6_text(calc, index, config);
+            Self::format_ipv6_text(calc, index, config);
             Ok(())
         }
     }
@@ -49,14 +49,14 @@ impl OutputFormatter {
             if let Ok(calc) = crate::IPv4Calculator::new(&cidr) {
                 if self.json_mode {
                     // JSON formatting as static function
-                    OutputFormatter::format_ipv4_json(&calc, addr_index, config)?;
+                    Self::format_ipv4_json(&calc, addr_index, config)?;
                 } else {
                     println!(
                         "-[int-ipv4 : {} ({})] - {}",
                         cidr, interface_info.name, addr_index
                     );
                     // Text formatting as static function
-                    OutputFormatter::format_ipv4_text_content(&calc, config);
+                    Self::format_ipv4_text_content(&calc, config);
                 }
                 addr_index += 1;
             }
@@ -67,14 +67,14 @@ impl OutputFormatter {
             if let Ok(calc) = crate::IPv6Calculator::new(&cidr) {
                 if self.json_mode {
                     // JSON formatting as static function
-                    OutputFormatter::format_ipv6_json(&calc, addr_index, config)?;
+                    Self::format_ipv6_json(&calc, addr_index, config)?;
                 } else {
                     println!(
                         "-[int-ipv6 : {} ({})] - {}",
                         cidr, interface_info.name, addr_index
                     );
                     // Text formatting as static function
-                    OutputFormatter::format_ipv6_text_content(&calc, config);
+                    Self::format_ipv6_text_content(&calc, config);
                 }
                 addr_index += 1;
             }
@@ -105,14 +105,14 @@ impl OutputFormatter {
                     let cidr = format!("{ipv4}/{prefix_len}");
                     if let Ok(calc) = crate::IPv4Calculator::new(&cidr) {
                         if self.json_mode {
-                            OutputFormatter::format_ipv4_json(&calc, addr_index, config)?;
+                            Self::format_ipv4_json(&calc, addr_index, config)?;
                         } else {
                             println!(
                                 "-[dns-ipv4 : {} ({})] - {}",
                                 cidr, resolved.hostname, addr_index
                             );
                             // Text formatting as static function
-                            OutputFormatter::format_ipv4_text_content(&calc, config);
+                            Self::format_ipv4_text_content(&calc, config);
                         }
                     }
                 }
@@ -120,14 +120,14 @@ impl OutputFormatter {
                     let cidr = format!("{ipv6}/128");
                     if let Ok(calc) = crate::IPv6Calculator::new(&cidr) {
                         if self.json_mode {
-                            OutputFormatter::format_ipv6_json(&calc, addr_index, config)?;
+                            Self::format_ipv6_json(&calc, addr_index, config)?;
                         } else {
                             println!(
                                 "-[dns-ipv6 : {} ({})] - {}",
                                 cidr, resolved.hostname, addr_index
                             );
                             // Text formatting as static function
-                            OutputFormatter::format_ipv6_text_content(&calc, config);
+                            Self::format_ipv6_text_content(&calc, config);
                         }
                     }
                 }
@@ -148,22 +148,39 @@ impl OutputFormatter {
             idx = index
         );
         // Delegate to text content formatter
-        OutputFormatter::format_ipv4_text_content(calc, config);
+        Self::format_ipv4_text_content(calc, config);
     }
 
     fn format_ipv4_text_content(calc: &IPv4Calculator, config: &Config) {
         println!();
-        Self::format_ipv4_cidr_section(calc);
-        if config.output.all_info || config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR) {
-            Self::format_ipv4_classful_section(calc, config);
-        }
-        Self::format_ipv4_split_section(calc, config);
-        Self::format_ipv4_extra_subnets_section(calc, config);
-        if config.output.all_info || config.ipv4.contains(crate::IPv4Flags::CIDR_BITMAP) {
-            Self::format_ipv4_cidr_bitmap_section(calc);
-        }
-        if config.output.all_info || config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP) {
+
+        // Handle -a (all info) flag - show multiple sections
+        if config.output.all_info {
+            Self::format_ipv4_classful_section(calc);
+            Self::format_ipv4_cidr_section(calc);
             Self::format_ipv4_classful_bitmap_section(calc);
+            Self::format_ipv4_cidr_bitmap_section(calc);
+            Self::format_ipv4_networks_section(calc);
+        }
+        // Handle specific operations
+        else if config.split_ipv4.is_some() {
+            // Only split networks
+            Self::format_ipv4_split_section(calc, config);
+        } else if config.extra_subnets.is_some() {
+            // Only extra subnets
+            Self::format_ipv4_extra_subnets_section(calc, config);
+        } else if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR) {
+            // Only classful information
+            Self::format_ipv4_classful_section(calc);
+        } else if config.ipv4.contains(crate::IPv4Flags::CIDR_BITMAP) {
+            // Only CIDR bitmaps
+            Self::format_ipv4_cidr_bitmap_section(calc);
+        } else if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP) {
+            // Only classful bitmaps
+            Self::format_ipv4_classful_bitmap_section(calc);
+        } else {
+            // Default: show CIDR section
+            Self::format_ipv4_cidr_section(calc);
         }
         // End of section separator
         println!("-");
@@ -195,45 +212,32 @@ impl OutputFormatter {
         );
     }
 
-    fn format_ipv4_classful_section(calc: &IPv4Calculator, config: &Config) {
+    fn format_ipv4_classful_section(calc: &IPv4Calculator) {
         println!();
         println!("[Classful]");
+        // Detailed classful output matching sipcalc golden
         println!("Host address            - {}", calc.address);
+        println!("Host address (decimal)  - {}", calc.to_decimal());
+        println!("Host address (hex)      - {}", calc.to_hex());
+        println!("Network address         - {}", calc.network);
         println!("Network class           - {}", calc.class);
-        if config.ipv4.contains(crate::IPv4Flags::WILDCARD) {
-            println!("Cisco wildcard          - {}", calc.wildcard);
-        }
+        println!("Network mask            - {}", calc.netmask);
+        println!("Network mask (hex)      - {}", calc.netmask_to_hex());
+        println!("Broadcast address       - {}", calc.broadcast);
     }
 
     fn format_ipv4_split_section(calc: &IPv4Calculator, config: &Config) {
         if let Some(ref split_mask) = config.split_ipv4 {
             if let Ok(new_prefix) = Self::parse_ipv4_mask_to_prefix(split_mask) {
                 if let Ok(subnets) = calc.split_network(new_prefix) {
-                    println!();
-                    println!("[Networks]");
-                    for (i, subnet) in subnets.iter().enumerate() {
-                        if config.output.verbose {
-                            println!();
-                            println!(
-                                "Subnet {idx} - {network}/{prefix}",
-                                idx = i + 1,
-                                network = subnet.network,
-                                prefix = subnet.prefix_length
-                            );
-                            println!("Network address         - {}", subnet.network);
-                            println!("Broadcast address       - {}", subnet.broadcast);
-                            println!(
-                                "Usable range            - {first} - {last}",
-                                first = subnet.get_first_usable(),
-                                last = subnet.get_last_usable()
-                            );
-                        } else {
-                            println!(
-                                "{network}/{prefix}",
-                                network = subnet.network,
-                                prefix = subnet.prefix_length
-                            );
-                        }
+                    // Match sipcalc golden output for split networks
+                    println!("[Split network]");
+                    for subnet in &subnets {
+                        // Print each subnet network and its broadcast address
+                        println!(
+                            "Network\t\t\t- {}     - {}",
+                            subnet.network, subnet.broadcast
+                        );
                     }
                 }
             }
@@ -243,30 +247,17 @@ impl OutputFormatter {
     fn format_ipv4_extra_subnets_section(calc: &IPv4Calculator, config: &Config) {
         if let Some(num_extra) = config.extra_subnets {
             let extra_subnets = calc.get_extra_subnets(num_extra);
-            println!();
-            println!("[Extra subnets]");
-            for (i, subnet) in extra_subnets.iter().enumerate() {
-                if config.output.verbose {
-                    println!();
+            // Match sipcalc golden output for extra subnets
+            println!("[Networks]");
+            for subnet in &extra_subnets {
+                // Check if this subnet contains the original network
+                if subnet.network == calc.network {
                     println!(
-                        "Subnet {idx} - {network}/{prefix}",
-                        idx = i + 1,
-                        network = subnet.network,
-                        prefix = subnet.prefix_length
-                    );
-                    println!("Network address         - {}", subnet.network);
-                    println!("Broadcast address       - {}", subnet.broadcast);
-                    println!(
-                        "Usable range            - {first} - {last}",
-                        first = subnet.get_first_usable(),
-                        last = subnet.get_last_usable()
+                        "Network - {} - {} (current)",
+                        subnet.network, subnet.broadcast
                     );
                 } else {
-                    println!(
-                        "{network}/{prefix}",
-                        network = subnet.network,
-                        prefix = subnet.prefix_length
-                    );
+                    println!("Network - {} - {}", subnet.network, subnet.broadcast);
                 }
             }
         }
@@ -275,22 +266,61 @@ impl OutputFormatter {
     fn format_ipv4_cidr_bitmap_section(calc: &IPv4Calculator) {
         println!();
         println!("[CIDR bitmaps]");
-        println!(
-            "Host address            - {bits}",
-            bits = calc.get_binary_representation()
-        );
-        println!(
-            "Network mask            - {bits}",
-            bits = calc.get_netmask_binary()
-        );
+        // Prepare binary representations
+        let host_bits = calc.get_binary_representation();
+        let network_bits = calc
+            .network
+            .octets()
+            .iter()
+            .map(|b| format!("{b:08b}"))
+            .collect::<Vec<_>>()
+            .join(".");
+        let mask_bits = calc.get_netmask_binary();
+        let broadcast_bits = calc
+            .broadcast
+            .octets()
+            .iter()
+            .map(|b| format!("{b:08b}"))
+            .collect::<Vec<_>>()
+            .join(".");
+        let wildcard_bits = calc
+            .wildcard
+            .octets()
+            .iter()
+            .map(|b| format!("{b:08b}"))
+            .collect::<Vec<_>>()
+            .join(".");
+        let first_bits = calc
+            .get_first_usable()
+            .octets()
+            .iter()
+            .map(|b| format!("{b:08b}"))
+            .collect::<Vec<_>>()
+            .join(".");
+        let last_bits = calc
+            .get_last_usable()
+            .octets()
+            .iter()
+            .map(|b| format!("{b:08b}"))
+            .collect::<Vec<_>>()
+            .join(".");
+        // Output binary bitmap section matching sipcalc
+        println!("Host address - {host_bits}");
+        println!("Network address - {network_bits}");
+        println!("Network mask - {mask_bits}");
+        println!("Broadcast address - {broadcast_bits}");
+        println!("Cisco wildcard - {wildcard_bits}");
+        println!("Network range - {network_bits} - {broadcast_bits}");
+        println!("Usable range - {first_bits} - {last_bits}");
     }
 
     fn format_ipv4_classful_bitmap_section(calc: &IPv4Calculator) {
         println!();
         println!("[Classful bitmaps]");
+        // Match sipcalc golden output: label as Network address for bitmaps
         println!(
-            "Host address            - {bits}",
-            bits = calc.get_binary_representation()
+            "Network address        - {}",
+            calc.get_binary_representation()
         );
         let classful_prefix = match calc.class {
             crate::ipv4::NetworkClass::A => 8,
@@ -305,87 +335,155 @@ impl OutputFormatter {
             bits = classful_calc.get_netmask_binary()
         );
     }
+
+    fn format_ipv4_networks_section(calc: &IPv4Calculator) {
+        println!();
+        println!("[Networks]");
+        println!(
+            "Network\t\t\t- {network}     - {broadcast} (current)",
+            network = calc.network,
+            broadcast = calc.broadcast
+        );
+    }
     /// Format IPv6 output in text mode.
     pub fn format_ipv6_text(calc: &IPv6Calculator, index: usize, config: &Config) {
         // Inline formatting using named arguments
-        println!(
-            "-[ipv6 : {address}/{prefix}] - {idx}",
-            address = calc.address,
-            prefix = calc.prefix_length,
-            idx = index
-        );
+        // Header: omit prefix for IPv4-in-IPv6 mapping
+        if config.ipv6.v4_in_v6 {
+            println!("-[ipv6 : {}] - {}", calc.address, index);
+        } else {
+            println!(
+                "-[ipv6 : {address}/{prefix}] - {idx}",
+                address = calc.address,
+                prefix = calc.prefix_length,
+                idx = index
+            );
+        }
         // Delegate to text content formatter
-        OutputFormatter::format_ipv6_text_content(calc, config);
+        Self::format_ipv6_text_content(calc, config);
     }
 
     fn format_ipv6_text_content(calc: &IPv6Calculator, config: &Config) {
         println!();
 
-        println!("[IPv6]");
+        if config.ipv6.v4_in_v6 {
+            Self::format_ipv6_v4inv6_section(calc);
+            return;
+        }
+
+        if config.ipv6.v6_reverse {
+            Self::format_ipv6_reverse_section(calc);
+            return;
+        }
+
+        if let Some(ref split_prefix) = config.split_ipv6 {
+            Self::format_ipv6_split_section(calc, split_prefix);
+            return;
+        }
+
+        Self::format_ipv6_info_section(calc);
+    }
+
+    fn format_ipv6_v4inv6_section(calc: &IPv6Calculator) {
+        println!("[V4INV6]");
+        if let Some((_, compressed_v4)) = calc.get_ipv4_embedded() {
+            // Expanded v4inv6: first five segments zero, then ffff and dotted IPv4
+            let ipv4_part = compressed_v4.trim_start_matches("::");
+            let exp_v4inv6 = format!("0000:0000:0000:0000:0000:{ipv4_part}");
+            println!("Expanded v4inv6 address - {exp_v4inv6}");
+            println!("Compr. v4inv6 address - {compressed_v4}");
+            println!("Comment - {} address", calc.address_type);
+        }
+        println!();
+        println!("-");
+        println!();
+    }
+
+    fn format_ipv6_reverse_section(calc: &IPv6Calculator) {
+        println!("[IPV6 DNS]");
+        println!("Reverse DNS (ip6.arpa) - {}", calc.get_reverse_dns());
+        println!();
+        println!("-");
+        println!();
+    }
+
+    fn format_ipv6_split_section(calc: &IPv6Calculator, split_prefix: &str) {
+        println!("[Split network]");
+        if let Ok(new_prefix) = split_prefix.parse::<u8>() {
+            let prefix = calc.prefix_length;
+            // Base address as 128-bit integer (network byte order)
+            let base = u128::from_be_bytes(calc.network.octets());
+            let count = 1_u128 << u32::from(new_prefix - prefix);
+            let step = 1_u128 << u32::from(128 - new_prefix);
+            for i in 0..count {
+                let start_u = base + i * step;
+                let end_u = base + ((i + 1) * step) - 1;
+                let start_addr = std::net::Ipv6Addr::from(start_u);
+                let end_addr = std::net::Ipv6Addr::from(end_u);
+                let start_exp = Self::format_ipv6_addr_expanded_padding(&start_addr);
+                let end_exp = Self::format_ipv6_addr_expanded_padding(&end_addr);
+                println!("Network - {start_exp} - {end_exp}");
+            }
+        }
+        println!();
+        println!("-");
+        println!();
+    }
+
+    fn format_ipv6_info_section(calc: &IPv6Calculator) {
+        println!("[IPV6 INFO]");
         println!("Expanded Address        - {}", calc.get_expanded_address());
         println!(
-            "Compressed Address      - {}",
+            "Compressed address      - {}",
             calc.get_compressed_address()
         );
+
+        // Network prefix
+        let net_expanded = Self::format_ipv6_addr_expanded_no_padding(&calc.network);
         println!(
-            "Subnet prefix           - {}/{}",
-            calc.network, calc.prefix_length
+            "Subnet prefix (masked)  - {net_expanded}/{}",
+            calc.prefix_length
         );
-        println!("Address ID              - {}", calc.get_host_id());
-        println!("Prefix address          - {}", calc.prefix_mask);
+
+        // Host ID
+        let host_id = calc.get_host_id();
+        let host_expanded = Self::format_ipv6_addr_expanded_no_padding(&host_id);
+        println!(
+            "Address ID (masked)     - {host_expanded}/{}",
+            calc.prefix_length
+        );
+
+        // Prefix mask
+        let mask_expanded = Self::format_ipv6_addr_expanded_no_padding(&calc.prefix_mask);
+        println!("Prefix address          - {mask_expanded}");
         println!("Prefix length           - {}", calc.prefix_length);
         println!("Address type            - {}", calc.address_type);
 
+        // Network range
         let (start, end) = calc.get_network_range();
-        println!("Network range           - {start} - {end}");
-
-        // IPv4 embedded addresses (show if v4_in_v6 flag or if address actually has IPv4)
-        if let Some((expanded_v4, compressed_v4)) = calc.get_ipv4_embedded() {
-            if config.ipv6.v4_in_v6 || config.output.all_info {
-                println!("Expanded v4-in-v6 address - {expanded_v4}");
-                println!("Compressed v4-in-v6 address - {compressed_v4}");
-            }
-        }
-
-        // Reverse DNS (show if v6_reverse flag or all info)
-        if config.ipv6.v6_reverse || config.output.all_info {
-            println!("Reverse DNS             - {}", calc.get_reverse_dns());
-        }
-
-        // Subnet splitting if requested
-        if let Some(ref split_prefix) = config.split_ipv6 {
-            if let Ok(new_prefix) = split_prefix.parse::<u8>() {
-                if let Ok(subnets) = calc.split_network(new_prefix) {
-                    println!();
-                    println!("[Networks]");
-                    for (i, subnet) in subnets.iter().enumerate() {
-                        if config.output.verbose {
-                            println!();
-                            println!(
-                                "Subnet {} - {}/{}",
-                                i + 1,
-                                subnet.network,
-                                subnet.prefix_length
-                            );
-                            println!(
-                                "Expanded Address        - {}",
-                                subnet.get_expanded_address()
-                            );
-                            println!(
-                                "Compressed Address      - {}",
-                                subnet.get_compressed_address()
-                            );
-                            let (start, end) = subnet.get_network_range();
-                            println!("Network range           - {start} - {end}");
-                        } else {
-                            println!("{}/{}", subnet.network, subnet.prefix_length);
-                        }
-                    }
-                }
-            }
-        }
+        let start_exp = Self::format_ipv6_addr_expanded_padding(&start);
+        let end_exp = Self::format_ipv6_addr_expanded_padding(&end);
+        println!("Network range           - {start_exp} - {end_exp}");
 
         println!();
+        println!("-");
+        println!();
+    }
+
+    fn format_ipv6_addr_expanded_padding(addr: &std::net::Ipv6Addr) -> String {
+        let seg = addr.segments();
+        format!(
+            "{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}",
+            seg[0], seg[1], seg[2], seg[3], seg[4], seg[5], seg[6], seg[7]
+        )
+    }
+
+    fn format_ipv6_addr_expanded_no_padding(addr: &std::net::Ipv6Addr) -> String {
+        let seg = addr.segments();
+        format!(
+            "{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}",
+            seg[0], seg[1], seg[2], seg[3], seg[4], seg[5], seg[6], seg[7]
+        )
     }
 
     fn format_ipv4_json(calc: &IPv4Calculator, index: usize, config: &Config) -> Result<()> {
@@ -539,6 +637,9 @@ mod tests {
     fn create_test_config() -> Config {
         Config {
             inputs: vec![],
+            explicit_ipv4: vec![],
+            explicit_ipv6: vec![],
+            explicit_interfaces: vec![],
             split_ipv4: None,
             split_ipv6: None,
             extra_subnets: None,
@@ -699,15 +800,14 @@ mod tests {
     }
 
     #[test]
-    fn test_config_with_verbose_splitting() {
+    fn test_config_with_subnet_splitting_different_mask() {
         let mut config = create_test_config();
-        config.split_ipv4 = Some("26".to_string());
-        config.output.verbose = true;
+        config.split_ipv4 = Some("28".to_string());
 
         let formatter = OutputFormatter::new(false);
         let calc = IPv4Calculator::new("192.168.1.0/24").unwrap();
 
-        // This should include verbose subnet splitting
+        // This should include subnet splitting with different mask
         let result = formatter.format_ipv4(&calc, 0, &config);
         assert!(result.is_ok());
     }
