@@ -19,7 +19,10 @@ and extends `sipcalc` functionality.
 ## Development workflow
 
 1. **Format**: `cargo fmt --all`
-2. **Lint**: `cargo clippy --all-targets -- -D warnings -W clippy::pedantic`
+2. **Lint (Comprehensive)**: `cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::nursery`
+   - **Code Quality Standard**: This project maintains **clippy compliance at nursery level** (the highest available)
+   - **No `#[allow]` bypasses** for actual issues - fix the underlying problem instead
+   - **The only allowed bypass**: `#[allow(dead_code)]` for intentionally unused but documented code
 3. **Build**: `cargo build --all-targets`
 4. **Test**: `cargo test`
 5. **Golden tests**: verify output parity with `sipcalc` via `cargo test --test golden_compare`.
@@ -29,7 +32,16 @@ and extends `sipcalc` functionality.
    `markdownlint-cli2 "**/*.md"`
 8. **Commit messages**: follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
 
-Ensure all steps pass before pushing changes.
+**All steps must pass with zero warnings before pushing changes.**
+
+### Code Quality Guidelines
+
+- **Clippy Level**: Maintain nursery + pedantic + all lint compliance
+- **Unused Code**: Remove unused code rather than ignoring with `_` prefixes
+- **Documentation**: Use proper backticks around code in doc comments
+- **Function Length**: Keep functions under 100 lines (split large functions into helpers)
+- **Self Usage**: Use `Self` instead of repeating type names
+- **Const Functions**: Make functions `const` where possible for compile-time evaluation
 
 ## CLI Usage
 

@@ -22,7 +22,7 @@ fn ripcalc_exe() -> PathBuf {
 #[test]
 fn compare_with_golden_outputs() {
     let exe = ripcalc_exe();
-    assert!(exe.exists(), "ripcalc binary not found at {:?}", exe);
+    assert!(exe.exists(), "ripcalc binary not found at {exe:?}");
 
     // Define test cases: (golden file stem, cli arguments)
     let cases: &[(&str, &[&str])] = &[
@@ -48,7 +48,7 @@ fn compare_with_golden_outputs() {
             name
         );
         let golden = std::fs::read_to_string(&golden_file)
-            .unwrap_or_else(|_| panic!("Failed to read golden file {}", golden_file));
+            .unwrap_or_else(|_| panic!("Failed to read golden file {golden_file}"));
         let golden_norm = normalize(&golden);
 
         let output = Command::new(&exe)
@@ -56,13 +56,9 @@ fn compare_with_golden_outputs() {
             .args(*args)
             .output()
             .expect("failed to execute ripcalc");
-        assert!(
-            output.status.success(),
-            "ripcalc returned error for {}",
-            name
-        );
+        assert!(output.status.success(), "ripcalc returned error for {name}");
         let rip_out = String::from_utf8_lossy(&output.stdout);
         let rip_norm = normalize(&rip_out);
-        assert_eq!(golden_norm, rip_norm, "Output mismatch for {}", name);
+        assert_eq!(golden_norm, rip_norm, "Output mismatch for {name}");
     }
 }
