@@ -392,7 +392,7 @@ impl OutputFormatter {
             let exp_v4inv6 = format!("0000:0000:0000:0000:0000:{ipv4_part}");
             println!("Expanded v4inv6 address - {exp_v4inv6}");
             println!("Compr. v4inv6 address - {compressed_v4}");
-            println!("Comment - {} address", calc.address_type);
+            println!("Comment - {}", calc.address_type);
         }
         println!();
         println!("-");

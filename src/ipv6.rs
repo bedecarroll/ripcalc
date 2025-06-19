@@ -1,3 +1,48 @@
+/*!
+IPv6 Address Classification and Analysis
+
+This module provides modern, standards-compliant IPv6 address classification
+that diverges from sipcalc for better accuracy and current standards compliance.
+
+## Breaking Changes from sipcalc
+
+**ripcalc uses updated IPv6 address classification based on current IANA assignments
+and RFC standards (as of 2024), while sipcalc uses outdated terminology from the late 1990s.**
+
+### Key Improvements:
+
+1. **Documentation Addresses**: `2001:db8::/32` addresses are now properly classified
+   as "Documentation Address" instead of sipcalc's generic "Aggregatable Global Unicast"
+
+2. **Regional Identification**: Global unicast addresses include Regional Internet
+   Registry (RIR) information:
+   - APNIC (Asia-Pacific)
+   - ARIN (North America)
+   - RIPE NCC (Europe/Middle East/Central Asia)
+   - LACNIC (Latin America and Caribbean)
+   - AFRINIC (Africa)
+
+3. **Modern Terminology**: Replaced outdated terms like "Aggregatable Global Unicast
+   Addresses" with current standard terminology
+
+4. **Comprehensive Special-Purpose Detection**: Includes modern address types like:
+   - Teredo tunneling addresses
+   - 6to4 transition addresses
+   - IPv4/IPv6 translation addresses
+   - Current multicast and local address classifications
+
+### Compatibility Note:
+
+This intentional divergence from sipcalc provides more accurate and useful information
+for modern IPv6 networks, following current IANA registries and RFC specifications.
+
+### Standards References:
+- IANA IPv6 Special-Purpose Address Registry
+- IANA IPv6 Global Unicast Address Assignments
+- RFC 4291 - IP Version 6 Addressing Architecture
+- RFC 3849 - IPv6 Address Prefix Reserved for Documentation
+*/
+
 use anyhow::{Result, anyhow};
 use std::net::Ipv6Addr;
 use std::str::FromStr;
@@ -13,27 +58,44 @@ pub struct IPv6Calculator {
 
 #[derive(Debug, Clone)]
 pub enum IPv6AddressType {
-    GlobalUnicast,
-    LinkLocal,
-    Multicast,
+    // Special addresses
     Loopback,
     Unspecified,
+
+    // IPv4-related addresses
     IPv4Mapped,
-    IPv4Compatible,
+    IPv4Compatible,      // Deprecated but still recognized
+    IPv4IPv6Translation, // 64:ff9b::/96
+
+    // Local addresses
+    LinkLocal,
     UniqueLocal,
-    /// Documentation addresses (`2001:db8::/32`)
-    ///
-    /// This variant is intentionally not constructed in `determine_address_type()` because
-    /// sipcalc treats `2001:db8::` addresses as regular Global Unicast rather than Documentation.
-    /// We disable the detection to maintain compatibility with sipcalc's conservative behavior.
-    /// However, the variant is preserved for:
-    /// 1. API completeness (RFC 3849 defines this as a valid address type)
-    /// 2. Testing the Display implementation
-    /// 3. Future extensibility if documentation detection is ever needed
-    #[allow(dead_code)]
-    Documentation,
     SiteLocal, // Deprecated but still recognized
+
+    // Multicast
+    Multicast,
+
+    // Special-purpose addresses
+    Documentation, // 2001:db8::/32 - Now properly detected!
+    Teredo,        // 2001::/32
+    SixToFour,     // 2002::/16
+
+    // Global unicast with regional identification
+    GlobalUnicast(GlobalRegion),
+
+    // Unknown or future use
     Other(String),
+}
+
+/// Regional Internet Registry assignment for Global Unicast addresses
+#[derive(Debug, Clone)]
+pub enum GlobalRegion {
+    Apnic,   // Asia-Pacific
+    Arin,    // North America
+    Ripe,    // Europe, Middle East, Central Asia
+    Lacnic,  // Latin America and Caribbean
+    Afrinic, // Africa
+    Unknown, // Allocated but region not identified
 }
 
 impl IPv6Calculator {
@@ -118,52 +180,109 @@ impl IPv6Calculator {
     }
 
     fn determine_address_type(address: Ipv6Addr) -> IPv6AddressType {
+        // Special addresses (::1, ::)
         if address.is_loopback() {
-            IPv6AddressType::Loopback
-        } else if address.is_unspecified() {
-            IPv6AddressType::Unspecified
-        } else if address.is_multicast() {
-            IPv6AddressType::Multicast
-        } else {
-            let segments = address.segments();
+            return IPv6AddressType::Loopback;
+        }
+        if address.is_unspecified() {
+            return IPv6AddressType::Unspecified;
+        }
+        if address.is_multicast() {
+            return IPv6AddressType::Multicast;
+        }
 
-            // IPv4-mapped IPv6 addresses (::ffff:0:0/96)
-            if segments[0..5] == [0, 0, 0, 0, 0] && segments[5] == 0xffff {
-                return IPv6AddressType::IPv4Mapped;
+        let segments = address.segments();
+
+        // IPv4-related addresses
+        // IPv4-mapped IPv6 addresses (::ffff:0:0/96)
+        if segments[0..5] == [0, 0, 0, 0, 0] && segments[5] == 0xffff {
+            return IPv6AddressType::IPv4Mapped;
+        }
+
+        // IPv4-compatible IPv6 addresses (deprecated, ::x.x.x.x)
+        if segments[0..6] == [0, 0, 0, 0, 0, 0] && segments[6] != 0 && segments[7] != 0 {
+            return IPv6AddressType::IPv4Compatible;
+        }
+
+        // IPv4-IPv6 Translation (64:ff9b::/96)
+        if segments[0] == 0x0064 && segments[1] == 0xff9b && segments[2] == 0 && segments[3] == 0 {
+            return IPv6AddressType::IPv4IPv6Translation;
+        }
+
+        // Local addresses
+        // Link-local addresses (fe80::/10)
+        if segments[0] & 0xffc0 == 0xfe80 {
+            return IPv6AddressType::LinkLocal;
+        }
+
+        // Unique local addresses (fc00::/7)
+        if segments[0] & 0xfe00 == 0xfc00 {
+            return IPv6AddressType::UniqueLocal;
+        }
+
+        // Site-local addresses (deprecated, fec0::/10)
+        if segments[0] & 0xffc0 == 0xfec0 {
+            return IPv6AddressType::SiteLocal;
+        }
+
+        // Special-purpose addresses in 2001::/16
+        if segments[0] == 0x2001 {
+            // Documentation addresses (2001:db8::/32) - Now properly detected!
+            if segments[1] == 0x0db8 {
+                return IPv6AddressType::Documentation;
             }
 
-            // IPv4-compatible IPv6 addresses (deprecated, ::x.x.x.x)
-            if segments[0..6] == [0, 0, 0, 0, 0, 0] && segments[6] != 0 && segments[7] != 0 {
-                return IPv6AddressType::IPv4Compatible;
+            // Teredo (2001::/32) - but not 2001:db8::/32
+            if segments[1] == 0x0000 {
+                return IPv6AddressType::Teredo;
             }
+        }
 
-            // Link-local addresses (fe80::/10)
-            if segments[0] & 0xffc0 == 0xfe80 {
-                return IPv6AddressType::LinkLocal;
-            }
+        // 6to4 addresses (2002::/16)
+        if segments[0] == 0x2002 {
+            return IPv6AddressType::SixToFour;
+        }
 
-            // Unique local addresses (fc00::/7)
-            if segments[0] & 0xfe00 == 0xfc00 {
-                return IPv6AddressType::UniqueLocal;
-            }
+        // Global unicast addresses (2000::/3) - identify by region
+        if segments[0] & 0xe000 == 0x2000 {
+            let region = Self::determine_global_region(address);
+            return IPv6AddressType::GlobalUnicast(region);
+        }
 
-            // Site-local addresses (deprecated, fec0::/10)
-            if segments[0] & 0xffc0 == 0xfec0 {
-                return IPv6AddressType::SiteLocal;
-            }
+        // Everything else is either reserved or unknown
+        IPv6AddressType::Other(format!("Unknown/Reserved address space: {address}"))
+    }
 
-            // Documentation addresses (2001:db8::/32) - disabled to match sipcalc behavior
-            // sipcalc treats these as regular global unicast addresses
-            // if segments[0] == 0x2001 && segments[1] == 0x0db8 {
-            //     return IPv6AddressType::Documentation;
-            // }
+    /// Determine which Regional Internet Registry (RIR) assigned a global unicast address
+    const fn determine_global_region(address: Ipv6Addr) -> GlobalRegion {
+        let segments = address.segments();
 
-            // Global unicast (everything else, basically)
-            if segments[0] & 0xe000 == 0x2000 {
-                return IPv6AddressType::GlobalUnicast;
-            }
-
-            IPv6AddressType::Other(format!("Unknown type for {address}"))
+        match segments[0] {
+            // APNIC allocations
+            0x2001 => match segments[1] {
+                // APNIC allocations - combined for clippy compliance
+                0x0200..=0x03ff | 0x0c00..=0x0dff | 0x0e00..=0x0fff | 0x4400..=0x45ff | 0x8000..=0x9fff | 0xa000..=0xafff | 0xb000..=0xbfff => GlobalRegion::Apnic,
+                // ARIN allocations - combined for clippy compliance
+                0x0400..=0x05ff | 0x1800..=0x19ff | 0x4800..=0x49ff => GlobalRegion::Arin,
+                // RIPE allocations - combined for clippy compliance
+                0x0600..=0x07ff | 0x0800..=0x0bff | 0x1400..=0x17ff | 0x1a00..=0x1bff | 0x1c00..=0x1fff | 0x2000..=0x3fff | 0x4000..=0x41ff | 0x4600..=0x47ff | 0x4a00..=0x4bff | 0x4c00..=0x4dff | 0x5000..=0x5fff => GlobalRegion::Ripe,
+                // LACNIC allocations
+                0x1200..=0x13ff => GlobalRegion::Lacnic, // 2001:1200::/23
+                // AFRINIC allocations
+                0x4200..=0x43ff => GlobalRegion::Afrinic, // 2001:4200::/23
+                _ => GlobalRegion::Unknown,
+            },
+            // RIPE major allocations - combined for clippy compliance
+            0x2003..=0x2003 | 0x2a00..=0x2a0f | 0x2a10..=0x2a1f => GlobalRegion::Ripe,
+            // APNIC major allocations - use range pattern for clippy compliance
+            0x2400..=0x241f => GlobalRegion::Apnic,
+            // ARIN major allocations - combined for clippy compliance
+            0x2600..=0x260f | 0x2610..=0x2611 | 0x2620..=0x2621 | 0x2630..=0x263f => GlobalRegion::Arin,
+            // LACNIC major allocations
+            0x2800..=0x280f => GlobalRegion::Lacnic, // 2800::/12
+            // AFRINIC major allocations
+            0x2c00..=0x2c0f => GlobalRegion::Afrinic, // 2c00::/12
+            _ => GlobalRegion::Unknown,
         }
     }
 
@@ -352,16 +471,46 @@ impl IPv6Calculator {
 impl std::fmt::Display for IPv6AddressType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::GlobalUnicast => write!(f, "Aggregatable Global Unicast Addresses"),
-            Self::LinkLocal => write!(f, "Link-Local Unicast Addresses"),
-            Self::Multicast => write!(f, "Multicast Addresses"),
-            Self::Loopback | Self::Unspecified => write!(f, "Reserved"),
-            Self::IPv4Mapped => write!(f, "IPv4-mapped IPv6"),
-            Self::IPv4Compatible => write!(f, "IPv4-compatible IPv6 (deprecated)"),
-            Self::UniqueLocal => write!(f, "Unique Local Addresses"),
-            Self::Documentation => write!(f, "Documentation"),
-            Self::SiteLocal => write!(f, "Site-Local (deprecated)"),
+            // Special addresses
+            Self::Loopback => write!(f, "Loopback Address"),
+            Self::Unspecified => write!(f, "Unspecified Address"),
+
+            // IPv4-related addresses
+            Self::IPv4Mapped => write!(f, "IPv4-mapped IPv6 address"),
+            Self::IPv4Compatible => write!(f, "IPv4-Compatible IPv6 Address (deprecated)"),
+            Self::IPv4IPv6Translation => write!(f, "IPv4/IPv6 Translation Address"),
+
+            // Local addresses
+            Self::LinkLocal => write!(f, "Link-Local Unicast Address"),
+            Self::UniqueLocal => write!(f, "Unique Local Unicast Address"),
+            Self::SiteLocal => write!(f, "Site-Local Unicast Address (deprecated)"),
+
+            // Multicast
+            Self::Multicast => write!(f, "Multicast Address"),
+
+            // Special-purpose addresses
+            Self::Documentation => write!(f, "Documentation Address"),
+            Self::Teredo => write!(f, "Teredo Tunneling Address"),
+            Self::SixToFour => write!(f, "6to4 Transition Address"),
+
+            // Global unicast with regional information
+            Self::GlobalUnicast(region) => write!(f, "Global Unicast Address ({region})"),
+
+            // Unknown or future use
             Self::Other(desc) => write!(f, "{desc}"),
+        }
+    }
+}
+
+impl std::fmt::Display for GlobalRegion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Apnic => write!(f, "APNIC - Asia-Pacific"),
+            Self::Arin => write!(f, "ARIN - North America"),
+            Self::Ripe => write!(f, "RIPE NCC - Europe/Middle East/Central Asia"),
+            Self::Lacnic => write!(f, "LACNIC - Latin America and Caribbean"),
+            Self::Afrinic => write!(f, "AFRINIC - Africa"),
+            Self::Unknown => write!(f, "Unknown/Unassigned"),
         }
     }
 }
@@ -422,9 +571,9 @@ mod tests {
 
     #[test]
     fn test_ipv6_address_types() {
-        // Global Unicast (2001:db8 treated as regular global unicast to match sipcalc)
+        // Documentation address (2001:db8 now properly detected, not like sipcalc)
         let calc = IPv6Calculator::new("2001:db8::1/64").unwrap();
-        assert!(matches!(calc.address_type, IPv6AddressType::GlobalUnicast));
+        assert!(matches!(calc.address_type, IPv6AddressType::Documentation));
 
         // Link-Local
         let calc = IPv6Calculator::new("fe80::1/64").unwrap();
@@ -581,39 +730,55 @@ mod tests {
 
     #[test]
     fn test_ipv6_address_type_display() {
+        // Test modern address type displays
         assert_eq!(
-            format!("{}", IPv6AddressType::GlobalUnicast),
-            "Aggregatable Global Unicast Addresses"
+            format!("{}", IPv6AddressType::GlobalUnicast(GlobalRegion::Ripe)),
+            "Global Unicast Address (RIPE NCC - Europe/Middle East/Central Asia)"
         );
         assert_eq!(
             format!("{}", IPv6AddressType::LinkLocal),
-            "Link-Local Unicast Addresses"
+            "Link-Local Unicast Address"
         );
         assert_eq!(
             format!("{}", IPv6AddressType::Multicast),
-            "Multicast Addresses"
+            "Multicast Address"
         );
-        assert_eq!(format!("{}", IPv6AddressType::Loopback), "Reserved");
-        assert_eq!(format!("{}", IPv6AddressType::Unspecified), "Reserved");
+        assert_eq!(format!("{}", IPv6AddressType::Loopback), "Loopback Address");
         assert_eq!(
-            format!("{}", IPv6AddressType::IPv4Mapped),
-            "IPv4-mapped IPv6"
-        );
-        assert_eq!(
-            format!("{}", IPv6AddressType::IPv4Compatible),
-            "IPv4-compatible IPv6 (deprecated)"
-        );
-        assert_eq!(
-            format!("{}", IPv6AddressType::UniqueLocal),
-            "Unique Local Addresses"
+            format!("{}", IPv6AddressType::Unspecified),
+            "Unspecified Address"
         );
         assert_eq!(
             format!("{}", IPv6AddressType::Documentation),
-            "Documentation"
+            "Documentation Address"
+        );
+        assert_eq!(
+            format!("{}", IPv6AddressType::Teredo),
+            "Teredo Tunneling Address"
+        );
+        assert_eq!(
+            format!("{}", IPv6AddressType::SixToFour),
+            "6to4 Transition Address"
+        );
+        assert_eq!(
+            format!("{}", IPv6AddressType::IPv4Mapped),
+            "IPv4-mapped IPv6 address"
+        );
+        assert_eq!(
+            format!("{}", IPv6AddressType::IPv4Compatible),
+            "IPv4-Compatible IPv6 Address (deprecated)"
+        );
+        assert_eq!(
+            format!("{}", IPv6AddressType::UniqueLocal),
+            "Unique Local Unicast Address"
+        );
+        assert_eq!(
+            format!("{}", IPv6AddressType::Documentation),
+            "Documentation Address"
         );
         assert_eq!(
             format!("{}", IPv6AddressType::SiteLocal),
-            "Site-Local (deprecated)"
+            "Site-Local Unicast Address (deprecated)"
         );
     }
 
@@ -647,7 +812,7 @@ mod tests {
             ("fc00::1", IPv6AddressType::UniqueLocal),
             ("fd00::1", IPv6AddressType::UniqueLocal),
             ("ff02::1", IPv6AddressType::Multicast),
-            ("2001:db8::1", IPv6AddressType::GlobalUnicast),
+            ("2001:db8::1", IPv6AddressType::Documentation),
             ("::ffff:192.0.2.1", IPv6AddressType::IPv4Mapped),
         ];
 
@@ -667,70 +832,48 @@ mod tests {
     }
 
     #[test]
-    fn test_ipv6_address_type_sipcalc_compatibility() {
-        // Test cases verified against sipcalc to ensure exact compatibility
+    fn test_ipv6_modern_address_classification() {
+        // Test modern IPv6 address classification - this diverges from sipcalc
+        // for better accuracy and current standards compliance
         let test_cases = vec![
-            // Loopback addresses
-            ("::1", "Reserved"),
-            ("0000:0000:0000:0000:0000:0000:0000:0001", "Reserved"),
-            // Unspecified address
-            ("::", "Reserved"),
-            ("0000:0000:0000:0000:0000:0000:0000:0000", "Reserved"),
-            // Link-local addresses (fe80::/10)
-            ("fe80::", "Link-Local Unicast Addresses"),
-            ("fe80::1", "Link-Local Unicast Addresses"),
+            // Special addresses
+            ("::1", "Loopback Address"),
+            ("::", "Unspecified Address"),
+            // IPv4-related addresses
+            ("::ffff:192.0.2.1", "IPv4-mapped IPv6 address"),
+            ("64:ff9b::192.0.2.1", "IPv4/IPv6 Translation Address"),
+            ("::192.0.2.1", "IPv4-Compatible IPv6 Address (deprecated)"),
+            // Local addresses
+            ("fe80::1", "Link-Local Unicast Address"),
+            ("fc00::1", "Unique Local Unicast Address"),
+            ("fd00::1", "Unique Local Unicast Address"),
+            ("fec0::1", "Site-Local Unicast Address (deprecated)"),
+            // Multicast
+            ("ff02::1", "Multicast Address"),
+            // Special-purpose addresses
+            ("2001:db8::1", "Documentation Address"), // Now properly detected!
+            ("2001::1", "Teredo Tunneling Address"),
+            ("2002:c000:0201::", "6to4 Transition Address"),
+            // Global unicast with regional identification
             (
-                "fe80:1234:5678:9abc:def0:1234:5678:9abc",
-                "Link-Local Unicast Addresses",
-            ),
+                "2001:470::1",
+                "Global Unicast Address (ARIN - North America)",
+            ), // Hurricane Electric
             (
-                "febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
-                "Link-Local Unicast Addresses",
-            ),
-            // Multicast addresses (ff00::/8)
-            ("ff00::", "Multicast Addresses"),
-            ("ff02::1", "Multicast Addresses"),
-            ("ff0e::1", "Multicast Addresses"),
+                "2001:4860:4860::8888",
+                "Global Unicast Address (ARIN - North America)",
+            ), // Google DNS
+            ("2600::1", "Global Unicast Address (ARIN - North America)"), // ARIN major block
             (
-                "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
-                "Multicast Addresses",
-            ),
-            // Unique Local addresses (fc00::/7)
-            ("fc00::", "Unique Local Addresses"),
-            ("fd00::", "Unique Local Addresses"),
+                "2a00::1",
+                "Global Unicast Address (RIPE NCC - Europe/Middle East/Central Asia)",
+            ), // RIPE major block
+            ("2400::1", "Global Unicast Address (APNIC - Asia-Pacific)"), // APNIC major block
             (
-                "fc00:1234:5678:9abc:def0:1234:5678:9abc",
-                "Unique Local Addresses",
-            ),
-            (
-                "fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
-                "Unique Local Addresses",
-            ),
-            // Site-local addresses (deprecated, fec0::/10)
-            ("fec0::", "Site-Local (deprecated)"),
-            ("fec0::1", "Site-Local (deprecated)"),
-            (
-                "feff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
-                "Site-Local (deprecated)",
-            ),
-            // IPv4-mapped IPv6 addresses (::ffff:0:0/96)
-            ("::ffff:192.0.2.1", "IPv4-mapped IPv6"),
-            ("::ffff:0:0", "IPv4-mapped IPv6"),
-            (
-                "0000:0000:0000:0000:0000:ffff:c000:0201",
-                "IPv4-mapped IPv6",
-            ),
-            // Global Unicast addresses (including 2001:db8:: which sipcalc treats as global)
-            ("2001:db8::", "Aggregatable Global Unicast Addresses"),
-            ("2001:db8::1", "Aggregatable Global Unicast Addresses"),
-            (
-                "2001:db8:1234:5678:9abc:def0:1234:5678",
-                "Aggregatable Global Unicast Addresses",
-            ),
-            ("2001:470::", "Aggregatable Global Unicast Addresses"),
-            ("2600::", "Aggregatable Global Unicast Addresses"),
-            ("2a00::", "Aggregatable Global Unicast Addresses"),
-            ("3000::", "Aggregatable Global Unicast Addresses"),
+                "2800::1",
+                "Global Unicast Address (LACNIC - Latin America and Caribbean)",
+            ), // LACNIC major block
+            ("2c00::1", "Global Unicast Address (AFRINIC - Africa)"),     // AFRINIC major block
         ];
 
         for (addr_str, expected_display) in test_cases {
@@ -744,6 +887,51 @@ mod tests {
                 actual_display, expected_display,
                 "Address type mismatch for {addr_str}: expected '{expected_display}', got '{actual_display}'"
             );
+        }
+    }
+
+    #[test]
+    fn test_ipv6_regional_assignments() {
+        // Test specific Regional Internet Registry assignments
+        let test_cases = vec![
+            // APNIC assignments
+            ("2001:200::", GlobalRegion::Apnic),
+            ("2400::", GlobalRegion::Apnic),
+            ("2410::", GlobalRegion::Apnic),
+            // ARIN assignments
+            ("2001:400::", GlobalRegion::Arin),
+            ("2600::", GlobalRegion::Arin),
+            ("2610::", GlobalRegion::Arin),
+            ("2620::", GlobalRegion::Arin),
+            ("2630::", GlobalRegion::Arin),
+            // RIPE assignments
+            ("2001:600::", GlobalRegion::Ripe),
+            ("2001:800::", GlobalRegion::Ripe),
+            ("2a00::", GlobalRegion::Ripe),
+            ("2a10::", GlobalRegion::Ripe),
+            // LACNIC assignments
+            ("2001:1200::", GlobalRegion::Lacnic),
+            ("2800::", GlobalRegion::Lacnic),
+            // AFRINIC assignments
+            ("2001:4200::", GlobalRegion::Afrinic),
+            ("2c00::", GlobalRegion::Afrinic),
+            // Unknown/unassigned
+            ("2001:f000::", GlobalRegion::Unknown), // Outside known allocations
+            ("2fff::", GlobalRegion::Unknown),
+        ];
+
+        for (addr_str, expected_region) in test_cases {
+            let calc = IPv6Calculator::new(&format!("{addr_str}/32")).unwrap();
+            if let IPv6AddressType::GlobalUnicast(region) = calc.address_type {
+                assert!(
+                    std::mem::discriminant(&region) == std::mem::discriminant(&expected_region),
+                    "Regional assignment mismatch for {addr_str}: expected {expected_region:?}, got {region:?}"
+                );
+            } else {
+                panic!(
+                    "Address {addr_str} should be classified as Global Unicast, got {:?}", calc.address_type
+                );
+            }
         }
     }
 
@@ -812,13 +1000,13 @@ mod tests {
         let calc_2000 = IPv6Calculator::new("2000::/128").unwrap();
         assert!(matches!(
             calc_2000.address_type,
-            IPv6AddressType::GlobalUnicast
+            IPv6AddressType::GlobalUnicast(_)
         ));
 
         let calc_3fff = IPv6Calculator::new("3fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff/128").unwrap();
         assert!(matches!(
             calc_3fff.address_type,
-            IPv6AddressType::GlobalUnicast
+            IPv6AddressType::GlobalUnicast(_)
         ));
 
         let calc_4000 = IPv6Calculator::new("4000::/128").unwrap();
@@ -828,13 +1016,15 @@ mod tests {
     #[test]
     fn test_ipv6_address_type_consistency() {
         // Test to verify that the address type calculation is consistent
-        // This prevents regressions in address type detection logic
+        // IMPORTANT: These tests reflect ripcalc's MODERN behavior, which intentionally
+        // diverges from sipcalc for better accuracy and current standards compliance
 
         let test_cases = vec![
-            ("::1/128", "Reserved"),
-            ("fe80::1/64", "Link-Local Unicast Addresses"),
-            ("ff02::1/128", "Multicast Addresses"),
-            ("2001:db8::1/48", "Aggregatable Global Unicast Addresses"),
+            // Modern classifications (different from sipcalc)
+            ("::1/128", "Loopback Address"), // sipcalc: "Reserved"
+            ("fe80::1/64", "Link-Local Unicast Address"), // sipcalc: "Link-Local Unicast Addresses"
+            ("ff02::1/128", "Multicast Address"), // sipcalc: "Multicast Addresses"
+            ("2001:db8::1/48", "Documentation Address"), // sipcalc: "Aggregatable Global Unicast Addresses"
         ];
 
         for (addr, expected_type) in test_cases {
