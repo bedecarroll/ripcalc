@@ -34,7 +34,7 @@ fn test_basic_ipv6_calculation() {
     assert!(stdout.contains("[IPV6 INFO]"));
     assert!(stdout.contains("Expanded Address        - 2001:0db8:0000:0000:0000:0000:0000:0000"));
     assert!(stdout.contains("Compressed address      - 2001:db8::"));
-    assert!(stdout.contains("Address type            - Aggregatable Global Unicast Addresses"));
+    assert!(stdout.contains("Address type            - Documentation Address"));
     assert!(stdout.contains("Network range"));
 }
 

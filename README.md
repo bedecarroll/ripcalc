@@ -221,6 +221,18 @@ The `--json` flag produces structured output suitable for programmatic consumpti
 
 `ripcalc` is designed to be a drop-in replacement for `sipcalc` with the same command-line interface and output format. All original `sipcalc` functionality is supported, plus additional modern features.
 
+### IPv6 Address Classification - Intentional Improvement
+
+**ripcalc deliberately uses modern IPv6 address classification that diverges from sipcalc for better accuracy.**
+
+| Address Type | sipcalc (outdated) | ripcalc (modern) |
+|--------------|-------------------|------------------|
+| `2001:db8::/32` | "Aggregatable Global Unicast" | "Documentation Address" ✅ |
+| Global addresses | Generic classification | Regional identification (ARIN, RIPE, etc.) ✅ |
+| Special-purpose | Limited detection | Comprehensive (Teredo, 6to4, etc.) ✅ |
+
+This provides more accurate and useful information for modern IPv6 networks, following current IANA registries and RFC specifications as of 2024.
+
 ## Dependencies
 
 - `clap`: Command-line argument parsing

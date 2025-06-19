@@ -34,6 +34,18 @@ and extends `sipcalc` functionality.
 
 **All steps must pass with zero warnings before pushing changes.**
 
+### ⚠️ Critical: Golden Test Files Protection
+
+**DO NOT modify files in `tests/sipcalc_golden/` unless adding new sipcalc output!**
+
+- The `tests/sipcalc_golden/*.txt` files contain authentic `sipcalc` command output
+- These files are **reference standards** for compatibility testing
+- **Never edit existing golden files** - they preserve exact sipcalc behavior
+- **Only add new files** when implementing new features that need sipcalc comparison
+- **To add new golden output**: run `sipcalc <args> > tests/sipcalc_golden/<name>.txt`
+- If ripcalc intentionally diverges from sipcalc (like modern IPv6 classification), handle the difference in test code, not golden files
+- Maintaining sipcalc compatibility is a **core project goal**
+
 ### Code Quality Guidelines
 
 - **Clippy Level**: Maintain nursery + pedantic + all lint compliance

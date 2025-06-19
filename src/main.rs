@@ -78,9 +78,9 @@ fn build_cli() -> Command {
 
 fn base_command() -> Command {
     Command::new("ripcalc")
-        .version(env!("CARGO_PKG_VERSION"))  // Automatically use Cargo.toml version
+        .version(env!("CARGO_PKG_VERSION")) // Automatically use Cargo.toml version
         .about("A subnet calculator that replicates and extends sipcalc functionality")
-        .disable_version_flag(true)  // Disable default -V/--version to use custom -v
+        .disable_version_flag(true) // Disable default -V/--version to use custom -v
 }
 
 fn add_input_args(cmd: Command) -> Command {
@@ -142,7 +142,7 @@ fn add_global_flags(cmd: Command) -> Command {
         Arg::new("split-verbose")
             .short('u')
             .long("split-verbose")
-            .help("Verbose split (legacy)")
+            .help("Verbose split")
             .action(clap::ArgAction::SetTrue),
     )
     .arg(
@@ -307,13 +307,13 @@ fn build_config(matches: &clap::ArgMatches) -> Config {
 
 fn main() -> Result<()> {
     let matches = build_cli().get_matches();
-    
+
     // Handle version flag (sipcalc compatibility: -v instead of -V)
     if matches.get_flag("version") {
         println!("ripcalc {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
-    
+
     let config = build_config(&matches);
 
     if config.input.from_stdin {
