@@ -1,0 +1,14 @@
+-[ipv6 : ff02::1/128] - 0
+
+[IPV6 INFO]
+Expanded Address	- ff02:0000:0000:0000:0000:0000:0000:0001
+Compressed address	- ff02::1
+Subnet prefix (masked)	- ff02:0:0:0:0:0:0:1/128
+Address ID (masked)	- 0:0:0:0:0:0:0:0/128
+Prefix address		- ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+Prefix length		- 128
+Address type		- Multicast Addresses
+Network range		- ff02:0000:0000:0000:0000:0000:0000:0001 -
+			  ff02:0000:0000:0000:0000:0000:0000:0001
+
+-

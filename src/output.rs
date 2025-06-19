@@ -183,33 +183,36 @@ impl OutputFormatter {
             Self::format_ipv4_cidr_section(calc);
         }
         // End of section separator
-        println!("-");
         println!();
+        println!("-");
     }
 
     // IPv4 formatting helper sections
     fn format_ipv4_cidr_section(calc: &IPv4Calculator) {
         println!("[CIDR]");
-        println!("Host address            - {}", calc.address);
-        println!("Host address (decimal)  - {}", calc.to_decimal());
-        println!("Host address (hex)      - {}", calc.to_hex());
-        println!("Network address         - {}", calc.network);
-        println!("Network mask            - {}", calc.netmask);
-        println!("Network mask (bits)     - {}", calc.prefix_length);
-        println!("Network mask (hex)      - {}", calc.netmask_to_hex());
-        println!("Broadcast address       - {}", calc.broadcast);
-        println!("Cisco wildcard          - {}", calc.wildcard);
-        println!("Addresses in network    - {}", calc.get_host_count());
+        println!("Host address\t\t- {}", calc.address);
+        println!("Host address (decimal)\t- {}", calc.to_decimal());
+        println!("Host address (hex)\t- {}", calc.to_hex());
+        println!("Network address\t\t- {}", calc.network);
+        println!("Network mask\t\t- {}", calc.netmask);
+        println!("Network mask (bits)\t- {}", calc.prefix_length);
+        println!("Network mask (hex)\t- {}", calc.netmask_to_hex());
+        println!("Broadcast address\t- {}", calc.broadcast);
+        println!("Cisco wildcard\t\t- {}", calc.wildcard);
+        println!("Addresses in network\t- {}", calc.get_host_count());
         println!(
-            "Network range           - {network} - {broadcast}",
+            "Network range\t\t- {network} - {broadcast}",
             network = calc.network,
             broadcast = calc.broadcast
         );
-        println!(
-            "Usable range            - {first} - {last}",
-            first = calc.get_first_usable(),
-            last = calc.get_last_usable()
-        );
+        // Only show usable range for traditional networks (exclude /31 and /32)
+        if calc.prefix_length < 31 {
+            println!(
+                "Usable range\t\t- {first} - {last}",
+                first = calc.get_first_usable(),
+                last = calc.get_last_usable()
+            );
+        }
     }
 
     fn format_ipv4_classful_section(calc: &IPv4Calculator) {
@@ -235,7 +238,7 @@ impl OutputFormatter {
                     for subnet in &subnets {
                         // Print each subnet network and its broadcast address
                         println!(
-                            "Network\t\t\t- {}     - {}",
+                            "Network\t\t\t- {:<15} - {}",
                             subnet.network, subnet.broadcast
                         );
                     }
@@ -396,7 +399,6 @@ impl OutputFormatter {
         }
         println!();
         println!("-");
-        println!();
     }
 
     fn format_ipv6_reverse_section(calc: &IPv6Calculator) {
@@ -404,7 +406,6 @@ impl OutputFormatter {
         println!("Reverse DNS (ip6.arpa) - {}", calc.get_reverse_dns());
         println!();
         println!("-");
-        println!();
     }
 
     fn format_ipv6_split_section(calc: &IPv6Calculator, split_prefix: &str) {
@@ -422,12 +423,11 @@ impl OutputFormatter {
                 let end_addr = std::net::Ipv6Addr::from(end_u);
                 let start_exp = Self::format_ipv6_addr_expanded_padding(&start_addr);
                 let end_exp = Self::format_ipv6_addr_expanded_padding(&end_addr);
-                println!("Network - {start_exp} - {end_exp}");
+                println!("Network\t\t\t- {} -\n\t\t\t  {}", start_exp, end_exp);
             }
         }
         println!();
         println!("-");
-        println!();
     }
 
     fn format_ipv6_info_section(calc: &IPv6Calculator) {
@@ -467,7 +467,6 @@ impl OutputFormatter {
 
         println!();
         println!("-");
-        println!();
     }
 
     fn format_ipv6_addr_expanded_padding(addr: &std::net::Ipv6Addr) -> String {
