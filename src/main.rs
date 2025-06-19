@@ -6,13 +6,12 @@ use std::io::{self, BufRead};
 #[derive(Debug, Default)]
 struct OutputFlags {
     json: bool,
-    verbose: bool,
     all_info: bool,
 }
 // Default for IPv4Flags: empty flags
 impl Default for IPv4Flags {
     fn default() -> Self {
-        IPv4Flags::empty()
+        Self::empty()
     }
 }
 
@@ -56,6 +55,9 @@ use output::OutputFormatter;
 #[derive(Debug)]
 struct Config {
     inputs: Vec<String>,
+    explicit_ipv4: Vec<String>,
+    explicit_ipv6: Vec<String>,
+    explicit_interfaces: Vec<String>,
     split_ipv4: Option<String>,
     split_ipv6: Option<String>,
     extra_subnets: Option<u32>,
@@ -76,8 +78,9 @@ fn build_cli() -> Command {
 
 fn base_command() -> Command {
     Command::new("ripcalc")
-        .version("0.1.0")
+        .version(env!("CARGO_PKG_VERSION"))  // Automatically use Cargo.toml version
         .about("A subnet calculator that replicates and extends sipcalc functionality")
+        .disable_version_flag(true)  // Disable default -V/--version to use custom -v
 }
 
 fn add_input_args(cmd: Command) -> Command {
@@ -143,10 +146,10 @@ fn add_global_flags(cmd: Command) -> Command {
             .action(clap::ArgAction::SetTrue),
     )
     .arg(
-        Arg::new("verbose")
+        Arg::new("version")
             .short('v')
-            .long("verbose")
-            .help("Verbose output (detailed split information)")
+            .long("version")
+            .help("Version information")
             .action(clap::ArgAction::SetTrue),
     )
 }
@@ -242,16 +245,24 @@ fn build_config(matches: &clap::ArgMatches) -> Config {
         .map(|vals| vals.cloned().collect())
         .unwrap_or_default();
 
-    // Add addresses from specific flags
-    if let Some(ipv4_addrs) = matches.get_many::<String>("addr-ipv4") {
-        inputs.extend(ipv4_addrs.cloned());
-    }
-    if let Some(ipv6_addrs) = matches.get_many::<String>("addr-ipv6") {
-        inputs.extend(ipv6_addrs.cloned());
-    }
-    if let Some(interfaces) = matches.get_many::<String>("addr-int") {
-        inputs.extend(interfaces.cloned());
-    }
+    // Collect explicit addresses
+    let explicit_ipv4: Vec<String> = matches
+        .get_many::<String>("addr-ipv4")
+        .map(|vals| vals.cloned().collect())
+        .unwrap_or_default();
+    let explicit_ipv6: Vec<String> = matches
+        .get_many::<String>("addr-ipv6")
+        .map(|vals| vals.cloned().collect())
+        .unwrap_or_default();
+    let explicit_interfaces: Vec<String> = matches
+        .get_many::<String>("addr-int")
+        .map(|vals| vals.cloned().collect())
+        .unwrap_or_default();
+
+    // Add addresses from specific flags to inputs list
+    inputs.extend(explicit_ipv4.iter().cloned());
+    inputs.extend(explicit_ipv6.iter().cloned());
+    inputs.extend(explicit_interfaces.iter().cloned());
 
     // Build IPv4 flags bitmask
     let mut ipv4_flags = IPv4Flags::empty();
@@ -270,6 +281,9 @@ fn build_config(matches: &clap::ArgMatches) -> Config {
 
     Config {
         inputs: inputs.clone(),
+        explicit_ipv4,
+        explicit_ipv6,
+        explicit_interfaces,
         split_ipv4: matches.get_one::<String>("v4split").cloned(),
         split_ipv6: matches.get_one::<String>("v6split").cloned(),
         extra_subnets: matches
@@ -277,7 +291,6 @@ fn build_config(matches: &clap::ArgMatches) -> Config {
             .and_then(|s| s.parse().ok()),
         output: OutputFlags {
             json: matches.get_flag("json"),
-            verbose: matches.get_flag("verbose") || matches.get_flag("split-verbose"),
             all_info: matches.get_flag("all"),
         },
         ipv4: ipv4_flags,
@@ -294,6 +307,13 @@ fn build_config(matches: &clap::ArgMatches) -> Config {
 
 fn main() -> Result<()> {
     let matches = build_cli().get_matches();
+    
+    // Handle version flag (sipcalc compatibility: -v instead of -V)
+    if matches.get_flag("version") {
+        println!("ripcalc {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+    
     let config = build_config(&matches);
 
     if config.input.from_stdin {
@@ -328,7 +348,56 @@ fn process_stdin(config: &Config) -> Result<()> {
 fn process_input(input: &str, index: usize, config: &Config) -> Result<()> {
     let formatter = OutputFormatter::new(config.output.json);
 
-    // Try to parse as IPv4 first
+    // Check if this input was explicitly specified with a type flag
+    if config.explicit_ipv4.contains(&input.to_string()) {
+        // Force IPv4 parsing even if it contains spaces
+        if let Ok(ipv4_calc) = IPv4Calculator::new(input) {
+            formatter.format_ipv4(&ipv4_calc, index, config)?;
+        } else {
+            eprintln!("Error: Unable to parse '{input}' as IPv4");
+        }
+        return Ok(());
+    }
+
+    if config.explicit_ipv6.contains(&input.to_string()) {
+        // Force IPv6 parsing
+        if let Ok(ipv6_calc) = IPv6Calculator::new(input) {
+            formatter.format_ipv6(&ipv6_calc, index, config)?;
+        } else {
+            eprintln!("Error: Unable to parse '{input}' as IPv6");
+        }
+        return Ok(());
+    }
+
+    if config.explicit_interfaces.contains(&input.to_string()) {
+        // Force interface parsing
+        if let Ok(interface_info) = interface::get_interface_info(input) {
+            formatter.format_interface(&interface_info, index, config)?;
+        } else {
+            eprintln!("Error: Unable to find interface '{input}'");
+        }
+        return Ok(());
+    }
+
+    // For inputs with spaces, try interface parsing first (to match sipcalc behavior)
+    if input.contains(' ') {
+        // Try as interface name first
+        if let Ok(interface_info) = interface::get_interface_info(input) {
+            formatter.format_interface(&interface_info, index, config)?;
+            return Ok(());
+        }
+        // If interface parsing fails, always show interface-style error message
+        // (sipcalc treats all space-containing inputs as interface names)
+        println!("-[int-ipv4 : {input}] - {index}");
+        println!();
+        println!("-[ERR : Unable to retrieve interface information]");
+        println!();
+        println!("-");
+        return Ok(());
+    }
+
+    // For inputs without spaces, use the original parsing order
+    // Try to parse as IPv4 (CIDR notation or single address)
     if let Ok(ipv4_calc) = IPv4Calculator::new(input) {
         formatter.format_ipv4(&ipv4_calc, index, config)?;
     }
@@ -352,4 +421,27 @@ fn process_input(input: &str, index: usize, config: &Config) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_version_from_cargo() {
+        // Test that version comes from Cargo.toml automatically
+        let cmd = build_cli();
+        let version = cmd.get_version().unwrap();
+        assert_eq!(version, env!("CARGO_PKG_VERSION"));
+        assert!(!version.is_empty());
+    }
+
+    #[test]
+    fn test_version_flag_available() {
+        // Test that our custom -v flag is available
+        let cmd = build_cli();
+        let version_arg = cmd.get_arguments().find(|arg| arg.get_short() == Some('v'));
+        assert!(version_arg.is_some());
+        assert_eq!(version_arg.unwrap().get_id(), "version");
+    }
 }

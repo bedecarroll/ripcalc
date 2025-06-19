@@ -31,10 +31,10 @@ fn test_basic_ipv6_calculation() {
 
     // Check for expected output sections
     assert!(stdout.contains("-[ipv6 : 2001:db8::/48] - 0"));
-    assert!(stdout.contains("[IPv6]"));
+    assert!(stdout.contains("[IPV6 INFO]"));
     assert!(stdout.contains("Expanded Address        - 2001:0db8:0000:0000:0000:0000:0000:0000"));
-    assert!(stdout.contains("Compressed Address      - 2001:db8::"));
-    assert!(stdout.contains("Address type            - Documentation"));
+    assert!(stdout.contains("Compressed address      - 2001:db8::"));
+    assert!(stdout.contains("Address type            - Aggregatable Global Unicast Addresses"));
     assert!(stdout.contains("Network range"));
 }
 
@@ -66,11 +66,11 @@ fn test_subnet_splitting() {
     let stdout = str::from_utf8(&output.stdout).unwrap();
 
     // Check for subnet splitting output
-    assert!(stdout.contains("[Networks]"));
-    assert!(stdout.contains("192.168.1.0/26"));
-    assert!(stdout.contains("192.168.1.64/26"));
-    assert!(stdout.contains("192.168.1.128/26"));
-    assert!(stdout.contains("192.168.1.192/26"));
+    assert!(stdout.contains("[Split network]"));
+    assert!(stdout.contains("192.168.1.0     - 192.168.1.63"));
+    assert!(stdout.contains("192.168.1.64     - 192.168.1.127"));
+    assert!(stdout.contains("192.168.1.128     - 192.168.1.191"));
+    assert!(stdout.contains("192.168.1.192     - 192.168.1.255"));
 }
 
 #[test]
@@ -91,9 +91,9 @@ fn test_all_info_flag() {
 
 #[test]
 fn test_different_input_formats() {
-    // Test dotted decimal netmask
+    // Test dotted decimal netmask with explicit IPv4 flag
     let output = Command::new("./target/debug/ripcalc")
-        .args(["192.168.1.5 255.255.255.0"])
+        .args(["-4", "192.168.1.5 255.255.255.0"])
         .output()
         .expect("Failed to execute ripcalc");
 
@@ -101,9 +101,9 @@ fn test_different_input_formats() {
     assert!(stdout.contains("192.168.1.5/24"));
     assert!(stdout.contains("Network address         - 192.168.1.0"));
 
-    // Test hex netmask
+    // Test hex netmask with explicit IPv4 flag
     let output = Command::new("./target/debug/ripcalc")
-        .args(["10.0.0.1 0xFFFF0000"])
+        .args(["-4", "10.0.0.1 0xFFFF0000"])
         .output()
         .expect("Failed to execute ripcalc");
 

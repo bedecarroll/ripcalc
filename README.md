@@ -235,6 +235,41 @@ The `--json` flag produces structured output suitable for programmatic consumpti
 
 MIT License
 
+## Development
+
+This project maintains **highest quality standards** with comprehensive linting and testing.
+
+### Quick Start
+
+```bash
+# Clone and build
+git clone <repo-url>
+cd ripcalc
+cargo build
+
+# Run with our comprehensive quality checks
+cargo fmt --all
+cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::nursery
+cargo test
+```
+
+### Code Quality Standards
+
+This project maintains **clippy compliance at nursery level** - the highest available lint level in Rust:
+
+- **Zero warnings** allowed in CI/CD
+- **No `#[allow]` bypasses** for actual issues - fix the underlying problem
+- **Comprehensive linting**: pedantic + nursery + all lint groups
+- **High code quality**: const functions, proper Self usage, documented design decisions
+
+See [AGENTS.md](./AGENTS.md) for complete development workflow and quality guidelines.
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues and pull requests.
+Contributions are welcome! Please ensure all development workflow steps pass before submitting:
+
+1. **Follow the [development workflow](./AGENTS.md#development-workflow)**
+2. **Maintain [code quality standards](./AGENTS.md#code-quality-guidelines)**
+3. **Submit issues and pull requests via GitHub**
+
+All changes must pass our comprehensive linting and testing before merge.
