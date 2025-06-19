@@ -237,7 +237,7 @@ impl IPv4Calculator {
                 let containing_24 = current_network & 0xFFFF_FF00; // Mask to /24 boundary
                 let subnets_per_24 = 2u32.pow(u32::from(self.prefix_length - 24));
                 let subnet_size_in_24 = 2u32.pow(u32::from(32 - self.prefix_length));
-                
+
                 for i in 0..subnets_per_24 {
                     let subnet_addr = containing_24 + (i * subnet_size_in_24);
                     let subnet_ip = Ipv4Addr::from(subnet_addr);
