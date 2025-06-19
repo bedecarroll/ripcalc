@@ -1,0 +1,5 @@
+-[int-ipv4 : 2001:db8::gggg] - 0
+
+-[ERR : Unable to retrieve interface information]
+
+-

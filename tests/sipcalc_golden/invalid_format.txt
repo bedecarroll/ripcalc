@@ -1,0 +1,5 @@
+-[int-ipv4 : not.an.ip.address] - 0
+
+-[ERR : Unable to retrieve interface information]
+
+-

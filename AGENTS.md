@@ -36,15 +36,58 @@ and extends `sipcalc` functionality.
 
 ### ⚠️ Critical: Golden Test Files Protection
 
-**DO NOT modify files in `tests/sipcalc_golden/` unless adding new sipcalc output!**
+**`tests/sipcalc_golden/` contains ONLY genuine sipcalc output - NEVER ripcalc output!**
 
-- The `tests/sipcalc_golden/*.txt` files contain authentic `sipcalc` command output
-- These files are **reference standards** for compatibility testing
-- **Never edit existing golden files** - they preserve exact sipcalc behavior
-- **Only add new files** when implementing new features that need sipcalc comparison
-- **To add new golden output**: run `sipcalc <args> > tests/sipcalc_golden/<name>.txt`
-- If ripcalc intentionally diverges from sipcalc (like modern IPv6 classification), handle the difference in test code, not golden files
-- Maintaining sipcalc compatibility is a **core project goal**
+#### Strict Rules for Golden Files
+
+1. **ONLY sipcalc output** - Never add ripcalc output to this directory
+2. **NO ripcalc-specific features** - JSON, modern IPv6 classifications, etc. don't belong here
+3. **Never edit existing golden files** - they preserve exact sipcalc behavior
+4. **Generation command**: `sipcalc <args> > tests/sipcalc_golden/<name>.txt`
+
+#### ❌ Common Mistakes to Avoid
+
+```bash
+# WRONG - Never use ripcalc for golden files
+./target/release/ripcalc 192.168.1.0/24 > tests/sipcalc_golden/example.txt
+
+# WRONG - sipcalc doesn't support JSON
+./target/release/ripcalc --json 192.168.1.0/24 > tests/sipcalc_golden/json_example.txt
+
+# CORRECT - Always use sipcalc
+sipcalc 192.168.1.0/24 > tests/sipcalc_golden/ipv4_example.txt
+```
+
+#### Testing Strategy by Feature Type
+
+| Feature Type | Test Location | Golden Files? | Purpose |
+|--------------|---------------|---------------|---------|
+| **sipcalc compatibility** | `tests/golden_compare.rs::compare_with_golden_outputs()` | ✅ Yes | Exact output matching |
+| **ripcalc improvements** | `tests/golden_compare.rs::test_ripcalc_improvements()` | ❌ No | Document intentional differences |
+| **ripcalc-only features** | `tests/golden_compare.rs::test_json_output()` | ❌ No | Validate ripcalc functionality |
+| **Modern IPv6 classification** | `tests/golden_compare.rs::test_modern_ipv6_classification()` | ❌ No | Document modernization |
+
+#### Features That Should NOT Have Golden Files
+
+- **JSON output** - ripcalc-specific feature (sipcalc doesn't support JSON)
+- **Modern IPv6 address types** - ripcalc uses RFC-compliant terminology vs sipcalc's 1990s terms
+- **Correct multiple input indexing** - ripcalc fixes sipcalc's indexing bug
+- **Wildcard mode variations** - ripcalc's implementation differs intentionally
+- **Verbose split differences** - different output format by design
+
+#### Verification Before Committing
+
+```bash
+# Check for ripcalc contamination
+grep -r "Documentation Address" tests/sipcalc_golden/  # Should be empty
+grep -r '"type":' tests/sipcalc_golden/              # Should be empty (JSON)
+grep -r "Teredo\|6to4 Transition" tests/sipcalc_golden/ # Should be empty (modern terms)
+
+# Check for JSON format contamination
+head -1 tests/sipcalc_golden/*.txt | grep "{"        # Should be empty
+```
+
+**Remember: This directory is the source of truth for sipcalc compatibility testing**
 
 ### Code Quality Guidelines
 

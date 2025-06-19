@@ -1,0 +1,141 @@
+-[ipv4 : 192.168.1.0/24] - 0
+
+[Split network - verbose]
+-[ipv4 : 192.168.1.0/24] - 0
+
+[CIDR]
+Host address		- 192.168.1.0
+Host address (decimal)	- 3232235776
+Host address (hex)	- C0A80100
+Network address		- 192.168.1.0
+Network mask		- 255.255.255.224
+Network mask (bits)	- 27
+Network mask (hex)	- FFFFFFE0
+Broadcast address	- 192.168.1.31
+Cisco wildcard		- 0.0.0.31
+Addresses in network	- 32
+Network range		- 192.168.1.0 - 192.168.1.31
+Usable range		- 192.168.1.1 - 192.168.1.30
+
+-
+-[ipv4 : 192.168.1.0/24] - 0
+
+[CIDR]
+Host address		- 192.168.1.32
+Host address (decimal)	- 3232235808
+Host address (hex)	- C0A80120
+Network address		- 192.168.1.32
+Network mask		- 255.255.255.224
+Network mask (bits)	- 27
+Network mask (hex)	- FFFFFFE0
+Broadcast address	- 192.168.1.63
+Cisco wildcard		- 0.0.0.31
+Addresses in network	- 32
+Network range		- 192.168.1.32 - 192.168.1.63
+Usable range		- 192.168.1.33 - 192.168.1.62
+
+-
+-[ipv4 : 192.168.1.0/24] - 0
+
+[CIDR]
+Host address		- 192.168.1.64
+Host address (decimal)	- 3232235840
+Host address (hex)	- C0A80140
+Network address		- 192.168.1.64
+Network mask		- 255.255.255.224
+Network mask (bits)	- 27
+Network mask (hex)	- FFFFFFE0
+Broadcast address	- 192.168.1.95
+Cisco wildcard		- 0.0.0.31
+Addresses in network	- 32
+Network range		- 192.168.1.64 - 192.168.1.95
+Usable range		- 192.168.1.65 - 192.168.1.94
+
+-
+-[ipv4 : 192.168.1.0/24] - 0
+
+[CIDR]
+Host address		- 192.168.1.96
+Host address (decimal)	- 3232235872
+Host address (hex)	- C0A80160
+Network address		- 192.168.1.96
+Network mask		- 255.255.255.224
+Network mask (bits)	- 27
+Network mask (hex)	- FFFFFFE0
+Broadcast address	- 192.168.1.127
+Cisco wildcard		- 0.0.0.31
+Addresses in network	- 32
+Network range		- 192.168.1.96 - 192.168.1.127
+Usable range		- 192.168.1.97 - 192.168.1.126
+
+-
+-[ipv4 : 192.168.1.0/24] - 0
+
+[CIDR]
+Host address		- 192.168.1.128
+Host address (decimal)	- 3232235904
+Host address (hex)	- C0A80180
+Network address		- 192.168.1.128
+Network mask		- 255.255.255.224
+Network mask (bits)	- 27
+Network mask (hex)	- FFFFFFE0
+Broadcast address	- 192.168.1.159
+Cisco wildcard		- 0.0.0.31
+Addresses in network	- 32
+Network range		- 192.168.1.128 - 192.168.1.159
+Usable range		- 192.168.1.129 - 192.168.1.158
+
+-
+-[ipv4 : 192.168.1.0/24] - 0
+
+[CIDR]
+Host address		- 192.168.1.160
+Host address (decimal)	- 3232235936
+Host address (hex)	- C0A801A0
+Network address		- 192.168.1.160
+Network mask		- 255.255.255.224
+Network mask (bits)	- 27
+Network mask (hex)	- FFFFFFE0
+Broadcast address	- 192.168.1.191
+Cisco wildcard		- 0.0.0.31
+Addresses in network	- 32
+Network range		- 192.168.1.160 - 192.168.1.191
+Usable range		- 192.168.1.161 - 192.168.1.190
+
+-
+-[ipv4 : 192.168.1.0/24] - 0
+
+[CIDR]
+Host address		- 192.168.1.192
+Host address (decimal)	- 3232235968
+Host address (hex)	- C0A801C0
+Network address		- 192.168.1.192
+Network mask		- 255.255.255.224
+Network mask (bits)	- 27
+Network mask (hex)	- FFFFFFE0
+Broadcast address	- 192.168.1.223
+Cisco wildcard		- 0.0.0.31
+Addresses in network	- 32
+Network range		- 192.168.1.192 - 192.168.1.223
+Usable range		- 192.168.1.193 - 192.168.1.222
+
+-
+-[ipv4 : 192.168.1.0/24] - 0
+
+[CIDR]
+Host address		- 192.168.1.224
+Host address (decimal)	- 3232236000
+Host address (hex)	- C0A801E0
+Network address		- 192.168.1.224
+Network mask		- 255.255.255.224
+Network mask (bits)	- 27
+Network mask (hex)	- FFFFFFE0
+Broadcast address	- 192.168.1.255
+Cisco wildcard		- 0.0.0.31
+Addresses in network	- 32
+Network range		- 192.168.1.224 - 192.168.1.255
+Usable range		- 192.168.1.225 - 192.168.1.254
+
+-
+
+-

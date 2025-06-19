@@ -182,7 +182,7 @@ impl IPv4Calculator {
 
     pub fn to_hex(&self) -> String {
         let addr_int: u32 = self.address.into();
-        format!("{addr_int:08X}")
+        format!("{addr_int:X}")
     }
 
     pub fn to_decimal(&self) -> u32 {
@@ -191,7 +191,7 @@ impl IPv4Calculator {
 
     pub fn netmask_to_hex(&self) -> String {
         let mask_int: u32 = self.netmask.into();
-        format!("{mask_int:08X}")
+        format!("{mask_int:X}")
     }
 
     pub fn split_network(&self, new_prefix: u8) -> Result<Vec<Self>> {

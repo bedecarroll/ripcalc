@@ -1,0 +1,14 @@
+-[ipv6 : fe80::/64] - 0
+
+[IPV6 INFO]
+Expanded Address	- fe80:0000:0000:0000:0000:0000:0000:0000
+Compressed address	- fe80::
+Subnet prefix (masked)	- fe80:0:0:0:0:0:0:0/64
+Address ID (masked)	- 0:0:0:0:0:0:0:0/64
+Prefix address		- ffff:ffff:ffff:ffff:0:0:0:0
+Prefix length		- 64
+Address type		- Link-Local Unicast Addresses
+Network range		- fe80:0000:0000:0000:0000:0000:0000:0000 -
+			  fe80:0000:0000:0000:ffff:ffff:ffff:ffff
+
+-

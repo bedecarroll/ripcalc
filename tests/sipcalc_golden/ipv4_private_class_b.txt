@@ -1,0 +1,17 @@
+-[ipv4 : 172.16.0.0/12] - 0
+
+[CIDR]
+Host address		- 172.16.0.0
+Host address (decimal)	- 2886729728
+Host address (hex)	- AC100000
+Network address		- 172.16.0.0
+Network mask		- 255.240.0.0
+Network mask (bits)	- 12
+Network mask (hex)	- FFF00000
+Broadcast address	- 172.31.255.255
+Cisco wildcard		- 0.15.255.255
+Addresses in network	- 1048576
+Network range		- 172.16.0.0 - 172.31.255.255
+Usable range		- 172.16.0.1 - 172.31.255.254
+
+-
