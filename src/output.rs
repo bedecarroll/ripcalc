@@ -149,13 +149,22 @@ impl OutputFormatter {
                 idx = index
             );
         } else {
-            // For explicit CIDR notation, show IP/prefix
-            println!(
-                "-[ipv4 : {address}/{prefix}] - {idx}",
-                address = calc.address,
-                prefix = calc.prefix_length,
-                idx = index
-            );
+            // Use original input format if it contains spaces (e.g., "192.168.1.5 255.255.255.0")
+            // Otherwise use CIDR notation
+            if calc.original_input.contains(' ') {
+                println!(
+                    "-[ipv4 : {original}] - {idx}",
+                    original = calc.original_input,
+                    idx = index
+                );
+            } else {
+                println!(
+                    "-[ipv4 : {address}/{prefix}] - {idx}",
+                    address = calc.address,
+                    prefix = calc.prefix_length,
+                    idx = index
+                );
+            }
         }
         // Delegate to text content formatter
         Self::format_ipv4_text_content(calc, config);
@@ -187,7 +196,10 @@ impl OutputFormatter {
                     println!();
                     Self::format_ipv4_cidr_bitmap_section(calc);
                     println!();
-                    Self::format_ipv4_networks_section(calc);
+                    // Only show Networks section if extra subnets won't be shown later
+                    if config.extra_subnets.is_none() {
+                        Self::format_ipv4_networks_section(calc);
+                    }
                 }
             } else {
                 // For explicit CIDR notation, show normal sections
@@ -199,27 +211,30 @@ impl OutputFormatter {
                 println!();
                 Self::format_ipv4_cidr_bitmap_section(calc);
                 println!();
-                Self::format_ipv4_networks_section(calc);
+                // Only show Networks section if extra subnets won't be shown later
+                if config.extra_subnets.is_none() {
+                    Self::format_ipv4_networks_section(calc);
+                }
             }
         }
+        // Check if any operations will be performed
+        let has_operations = config.split_ipv4.is_some() || config.extra_subnets.is_some();
+
+        // Check if any specific display flags are set
+        let has_specific_flags = config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR)
+            || config.ipv4.contains(crate::IPv4Flags::CIDR_BITMAP)
+            || config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP)
+            || config.ipv4.contains(crate::IPv4Flags::WILDCARD);
+
         // Handle specific operations and flags
-        else {
-            let mut sections_shown = false;
-
-            // Check if any operations will be performed
-            let has_operations = config.split_ipv4.is_some() || config.extra_subnets.is_some();
-
-            // Check if any specific display flags are set
-            let has_specific_flags = config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR)
-                || config.ipv4.contains(crate::IPv4Flags::CIDR_BITMAP)
-                || config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP)
-                || config.ipv4.contains(crate::IPv4Flags::WILDCARD);
-
+        if !config.output.all_info {
             // Show default CIDR section if no operations and no specific flags are set
-            if !has_operations && !has_specific_flags {
+            let mut sections_shown = if !has_operations && !has_specific_flags {
                 Self::format_ipv4_cidr_section(calc);
-                sections_shown = true;
-            }
+                true
+            } else {
+                false
+            };
 
             // Show classful information if requested
             if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR) {
@@ -258,10 +273,16 @@ impl OutputFormatter {
         }
 
         // Show operations (they come after base sections) - for ALL cases
-        let mut sections_shown = config.output.all_info; // all_info always shows sections
+        let mut sections_shown = config.output.all_info
+            || config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR)
+            || config.ipv4.contains(crate::IPv4Flags::CIDR_BITMAP)
+            || config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP)
+            || config.ipv4.contains(crate::IPv4Flags::WILDCARD)
+            || (!has_operations && !has_specific_flags); // default CIDR section was shown
 
         if config.extra_subnets.is_some() {
-            if sections_shown {
+            // Don't add extra spacing if we're in all_info mode (sections flow together)
+            if sections_shown && !config.output.all_info {
                 println!();
             }
             Self::format_ipv4_extra_subnets_section(calc, config);
@@ -333,12 +354,25 @@ impl OutputFormatter {
         println!("Broadcast address\t- {}", calc.broadcast);
     }
 
+    fn format_ipv4_classful_section_for_split(subnet: &IPv4Calculator, original: &IPv4Calculator) {
+        println!("[Classful]");
+        // Show subnet's host address but original network's classful info (sipcalc behavior)
+        println!("Host address\t\t- {}", subnet.address);
+        println!("Host address (decimal)\t- {}", subnet.to_decimal());
+        println!("Host address (hex)\t- {}", subnet.to_hex());
+        println!("Network address\t\t- {}", original.network);
+        println!("Network class\t\t- {}", original.class);
+        println!("Network mask\t\t- {}", original.netmask);
+        println!("Network mask (hex)\t- {}", original.netmask_to_hex());
+        println!("Broadcast address\t- {}", original.broadcast);
+    }
+
     fn format_ipv4_split_section(calc: &IPv4Calculator, config: &Config) {
         if let Some(ref split_mask) = config.split_ipv4 {
             if let Ok(new_prefix) = Self::parse_ipv4_mask_to_prefix(split_mask) {
                 if let Ok(subnets) = calc.split_network(new_prefix) {
                     if config.output.split_verbose {
-                        // Verbose split mode - show full CIDR information for each subnet
+                        // Verbose split mode - show information for each subnet (matches sipcalc)
                         println!("[Split network - verbose]");
                         for subnet in &subnets {
                             // Show header for each subnet with original network (matches sipcalc format)
@@ -348,7 +382,31 @@ impl OutputFormatter {
                                 prefix = calc.prefix_length
                             );
                             println!();
-                            Self::format_ipv4_cidr_section(subnet);
+
+                            if config.output.all_info {
+                                // With -a flag: show full information for each subnet
+                                // Show classful section with hybrid info (subnet host, original classful)
+                                Self::format_ipv4_classful_section_for_split(subnet, calc);
+                                println!();
+
+                                // Show CIDR section for the split subnet
+                                Self::format_ipv4_cidr_section(subnet);
+                                println!();
+
+                                // Show classful bitmaps section using original network
+                                Self::format_ipv4_classful_bitmap_section(calc);
+                                println!();
+
+                                // Show CIDR bitmaps section for the split subnet
+                                Self::format_ipv4_cidr_bitmap_section(subnet);
+                                println!();
+
+                                // Show networks section for the split subnet
+                                Self::format_ipv4_networks_section(subnet);
+                            } else {
+                                // Without -a flag: show only CIDR section for each subnet (sipcalc behavior)
+                                Self::format_ipv4_cidr_section(subnet);
+                            }
                             println!();
                             println!("-");
                         }
@@ -476,7 +534,7 @@ impl OutputFormatter {
     fn format_ipv4_networks_section(calc: &IPv4Calculator) {
         println!("[Networks]");
         println!(
-            "Network\t\t\t- {network}     - {broadcast} (current)",
+            "Network\t\t\t- {network:<15} - {broadcast} (current)",
             network = calc.network,
             broadcast = calc.broadcast
         );
@@ -580,6 +638,16 @@ impl OutputFormatter {
             Self::format_ipv6_v4inv6_section(calc);
             println!();
             Self::format_ipv6_reverse_section(calc);
+
+            // If subnet splitting is also requested with -a, show it too
+            if let Some(ref split_prefix) = config.split_ipv6 {
+                println!();
+                Self::format_ipv6_split_section(calc, split_prefix);
+            }
+
+            // End of section separator
+            println!();
+            println!("-");
             return;
         }
 
@@ -665,12 +733,17 @@ impl OutputFormatter {
     fn format_ipv6_v4inv6_section(calc: &IPv6Calculator) {
         println!("[V4INV6]");
         if let Some((_, compressed_v4)) = calc.get_ipv4_embedded() {
-            // Expanded v4inv6: first five segments zero, then ffff and dotted IPv4
+            // For actual IPv4-embedded addresses, show with comment
             let ipv4_part = compressed_v4.trim_start_matches("::");
             let exp_v4inv6 = format!("0000:0000:0000:0000:0000:{ipv4_part}");
             println!("Expanded v4inv6 address\t- {exp_v4inv6}");
             println!("Compr. v4inv6 address\t- {compressed_v4}");
             println!("Comment\t\t\t- {}", calc.address_type);
+        } else {
+            // For any other IPv6 address, show IPv4 representation like sipcalc
+            let (expanded, compressed) = calc.get_ipv4_representation();
+            println!("Expanded v4inv6 address\t- {expanded}");
+            println!("Compr. v4inv6 address\t- {compressed}");
         }
     }
 

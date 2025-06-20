@@ -12,6 +12,7 @@ pub struct IPv4Calculator {
     pub wildcard: Ipv4Addr,
     pub class: NetworkClass,
     pub is_bare_address: bool, // True if input was just an IP without CIDR notation
+    pub original_input: String, // Store the original input for display purposes
 }
 
 #[derive(Debug, Clone)]
@@ -42,6 +43,7 @@ impl IPv4Calculator {
             wildcard,
             class,
             is_bare_address,
+            original_input: input.to_string(),
         })
     }
 
@@ -63,10 +65,14 @@ impl IPv4Calculator {
             wildcard,
             class,
             is_bare_address,
+            original_input: input.to_string(),
         })
     }
 
-    fn parse_input(input: &str, ipv4_flags: Option<crate::IPv4Flags>) -> Result<(Ipv4Addr, u8, bool)> {
+    fn parse_input(
+        input: &str,
+        ipv4_flags: Option<crate::IPv4Flags>,
+    ) -> Result<(Ipv4Addr, u8, bool)> {
         if input.contains('/') {
             // CIDR notation
             let parts: Vec<&str> = input.split('/').collect();
@@ -167,21 +173,21 @@ impl IPv4Calculator {
         }
     }
 
-    fn get_prefix_for_bare_address(address: Ipv4Addr, ipv4_flags: Option<crate::IPv4Flags>) -> u8 {
+    const fn get_prefix_for_bare_address(address: Ipv4Addr, ipv4_flags: Option<crate::IPv4Flags>) -> u8 {
         // Determine if we should use /32 (sipcalc-compatible) or classful behavior
         if let Some(flags) = ipv4_flags {
             // When CLASSFUL_ADDR flag is present, always use classful prefixes (highest priority)
             if flags.contains(crate::IPv4Flags::CLASSFUL_ADDR) {
                 return Self::get_classful_prefix(address);
             }
-            
+
             // When CIDR_BITMAP flag is present, use /32 for bare addresses (matches sipcalc behavior)
             // This covers the case where -b flag makes sipcalc treat bare addresses as /32 hosts
             if flags.contains(crate::IPv4Flags::CIDR_BITMAP) {
                 return 32;
             }
         }
-        
+
         // Default behavior: use classful prefixes (maintains backward compatibility)
         Self::get_classful_prefix(address)
     }
