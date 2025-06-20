@@ -98,7 +98,7 @@ fn test_different_input_formats() {
         .expect("Failed to execute ripcalc");
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
-    assert!(stdout.contains("192.168.1.5/24"));
+    assert!(stdout.contains("192.168.1.5 255.255.255.0"));
     assert!(stdout.contains("Network address\t\t- 192.168.1.0"));
 
     // Test hex netmask with explicit IPv4 flag
@@ -108,7 +108,7 @@ fn test_different_input_formats() {
         .expect("Failed to execute ripcalc");
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
-    assert!(stdout.contains("10.0.0.1/16"));
+    assert!(stdout.contains("10.0.0.1 0xFFFF0000"));
     assert!(stdout.contains("Network address\t\t- 10.0.0.0"));
 }
 
@@ -382,7 +382,7 @@ fn test_explicit_ipv4_flag() {
         .expect("Failed to execute ripcalc");
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
-    assert!(stdout.contains("192.168.1.5/24"));
+    assert!(stdout.contains("192.168.1.5 255.255.255.0"));
     assert!(stdout.contains("Network address\t\t- 192.168.1.0"));
 }
 

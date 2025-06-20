@@ -509,6 +509,40 @@ impl IPv6Calculator {
         None
     }
 
+    /// Get IPv4 representation for any IPv6 address (like sipcalc's V4INV6 section)
+    pub fn get_ipv4_representation(&self) -> (String, String) {
+        let segments = self.address.segments();
+
+        // Extract the last 32 bits as IPv4 (last two segments)
+        let ipv4_part = format!(
+            "{}.{}.{}.{}",
+            (segments[6] >> 8) & 0xFF,
+            segments[6] & 0xFF,
+            (segments[7] >> 8) & 0xFF,
+            segments[7] & 0xFF
+        );
+
+        // Create expanded form like sipcalc: replace last two segments with dotted decimal
+        let expanded = format!(
+            "{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{ipv4_part}",
+            segments[0], segments[1], segments[2], segments[3], segments[4], segments[5]
+        );
+
+        // Create compressed form: use :: compression where appropriate, then add IPv4
+        let compressed_prefix = if segments[0..6] == [0, 0, 0, 0, 0, 0] {
+            "::".to_string()
+        } else {
+            // Find the best compression spot and format accordingly
+            let compressed_addr = self.get_compressed_address();
+            // Replace the last segment group with IPv4 notation
+            compressed_addr.rfind(':').map_or_else(|| format!("{compressed_addr}:"), |last_colon| compressed_addr[..=last_colon].to_string())
+        };
+
+        let compressed = format!("{compressed_prefix}{ipv4_part}");
+
+        (expanded, compressed)
+    }
+
     pub fn split_network(&self, new_prefix: u8) -> Result<Vec<Self>> {
         if new_prefix <= self.prefix_length {
             return Err(anyhow!("New prefix must be longer than current prefix"));
