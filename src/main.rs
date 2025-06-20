@@ -53,7 +53,7 @@ use ipv4::IPv4Calculator;
 use ipv6::IPv6Calculator;
 use output::OutputFormatter;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Config {
     inputs: Vec<String>,
     explicit_ipv4: Vec<String>,
@@ -356,7 +356,7 @@ fn process_input(input: &str, index: usize, config: &Config) -> Result<()> {
         if let Ok(ipv4_calc) = IPv4Calculator::new(input) {
             formatter.format_ipv4(&ipv4_calc, index, config)?;
         } else {
-            eprintln!("Error: Unable to parse '{input}' as IPv4");
+            return Err(anyhow::anyhow!("Unable to parse '{input}' as IPv4"));
         }
         return Ok(());
     }
@@ -366,7 +366,7 @@ fn process_input(input: &str, index: usize, config: &Config) -> Result<()> {
         if let Ok(ipv6_calc) = IPv6Calculator::new(input) {
             formatter.format_ipv6(&ipv6_calc, index, config)?;
         } else {
-            eprintln!("Error: Unable to parse '{input}' as IPv6");
+            return Err(anyhow::anyhow!("Unable to parse '{input}' as IPv6"));
         }
         return Ok(());
     }
@@ -376,7 +376,7 @@ fn process_input(input: &str, index: usize, config: &Config) -> Result<()> {
         if let Ok(interface_info) = interface::get_interface_info(input) {
             formatter.format_interface(&interface_info, index, config)?;
         } else {
-            eprintln!("Error: Unable to find interface '{input}'");
+            return Err(anyhow::anyhow!("Unable to find interface '{input}'"));
         }
         return Ok(());
     }
@@ -416,10 +416,10 @@ fn process_input(input: &str, index: usize, config: &Config) -> Result<()> {
         if let Ok(resolved) = dns::resolve_hostname(input) {
             formatter.format_resolved(&resolved, index, config)?;
         } else {
-            eprintln!("Error: Unable to parse or resolve '{input}'");
+            return Err(anyhow::anyhow!("Unable to parse or resolve '{input}'"));
         }
     } else {
-        eprintln!("Error: Unable to parse '{input}'");
+        return Err(anyhow::anyhow!("Unable to parse '{input}'"));
     }
 
     Ok(())
@@ -445,5 +445,61 @@ mod tests {
         let version_arg = cmd.get_arguments().find(|arg| arg.get_short() == Some('v'));
         assert!(version_arg.is_some());
         assert_eq!(version_arg.unwrap().get_id(), "version");
+    }
+
+    #[test]
+    fn test_process_input_invalid_returns_error() {
+        let config = Config::default();
+        let result = process_input("invalid_input", 0, &config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unable to parse 'invalid_input'"));
+    }
+
+    #[test]
+    fn test_process_input_explicit_ipv4_invalid_returns_error() {
+        let mut config = Config::default();
+        config.explicit_ipv4.push("invalid_ipv4".to_string());
+        let result = process_input("invalid_ipv4", 0, &config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unable to parse 'invalid_ipv4' as IPv4"));
+    }
+
+    #[test]
+    fn test_process_input_explicit_ipv6_invalid_returns_error() {
+        let mut config = Config::default();
+        config.explicit_ipv6.push("invalid_ipv6".to_string());
+        let result = process_input("invalid_ipv6", 0, &config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unable to parse 'invalid_ipv6' as IPv6"));
+    }
+
+    #[test]
+    fn test_process_input_explicit_interface_invalid_returns_error() {
+        let mut config = Config::default();
+        config.explicit_interfaces.push("nonexistent_interface".to_string());
+        let result = process_input("nonexistent_interface", 0, &config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unable to find interface 'nonexistent_interface'"));
+    }
+
+    #[test]
+    fn test_process_input_valid_ipv4_succeeds() {
+        let config = Config::default();
+        let result = process_input("192.168.1.1", 0, &config);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_process_input_valid_ipv4_cidr_succeeds() {
+        let config = Config::default();
+        let result = process_input("192.168.1.0/24", 0, &config);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_process_input_valid_ipv6_succeeds() {
+        let config = Config::default();
+        let result = process_input("2001:db8::1", 0, &config);
+        assert!(result.is_ok());
     }
 }
