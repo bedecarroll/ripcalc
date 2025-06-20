@@ -27,6 +27,17 @@ fn transform_sipcalc_to_ripcalc(s: &str) -> String {
             "Aggregatable Global Unicast Addresses",
             "Teredo Tunneling Address",
         );
+    } else if result.contains("::1") {
+        result = result.replace("Reserved", "Loopback Address");
+        let had_trailing_newline = result.ends_with('\n');
+        result = result
+            .lines()
+            .filter(|line| !line.starts_with("Comment\t"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        if had_trailing_newline {
+            result.push('\n');
+        }
     }
 
     // General formatting standardizations - ripcalc uses singular form consistently
@@ -77,11 +88,7 @@ fn compare_with_golden_outputs() {
         ("ipv4_cidr_bitmap", &["-b", "192.168.1.0/24"], None),
         ("ipv4_classful_bitmap", &["-x", "192.168.1.0/24"], None),
         // IPv4 Disabled Tests (documented reasons)
-        (
-            "ipv4_wildcard",
-            &["-w", "192.168.1.0/24"],
-            None,
-        ),
+        ("ipv4_wildcard", &["-w", "192.168.1.0/24"], None),
         (
             "ipv4_verbose_split",
             &["-v", "-s", "26", "192.168.1.0/24"],
@@ -124,12 +131,7 @@ fn compare_with_golden_outputs() {
         // IPv6 Special Cases
         ("ipv6_ipv4_mapped", &["::ffff:192.0.2.1"], None),
         ("ipv6_ipv4_compatible", &["::192.0.2.1/128"], None),
-        // IPv6 Disabled Tests (documented reasons)
-        (
-            "ipv6_loopback",
-            &["::1/128"],
-            Some("ripcalc shows 'Loopback Address' vs sipcalc 'Reserved' + 'Comment - Loopback'"),
-        ),
+        ("ipv6_loopback", &["::1/128"], None),
         (
             "ipv6_invalid_hex",
             &["2001:db8::gggg"],

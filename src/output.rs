@@ -251,15 +251,15 @@ impl OutputFormatter {
     fn format_ipv4_classful_section(calc: &IPv4Calculator) {
         println!();
         println!("[Classful]");
-        // Detailed classful output with spaces (for CIDR notation compatibility)
-        println!("Host address            - {}", calc.address);
-        println!("Host address (decimal)  - {}", calc.to_decimal());
-        println!("Host address (hex)      - {}", calc.to_hex());
-        println!("Network address         - {}", calc.network);
-        println!("Network class           - {}", calc.class);
-        println!("Network mask            - {}", calc.netmask);
-        println!("Network mask (hex)      - {}", calc.netmask_to_hex());
-        println!("Broadcast address       - {}", calc.broadcast);
+        // Detailed classful output with tabs (for CIDR notation compatibility)
+        println!("Host address\t\t- {}", calc.address);
+        println!("Host address (decimal)\t- {}", calc.to_decimal());
+        println!("Host address (hex)\t- {}", calc.to_hex());
+        println!("Network address\t\t- {}", calc.network);
+        println!("Network class\t\t- {}", calc.class);
+        println!("Network mask\t\t- {}", calc.netmask);
+        println!("Network mask (hex)\t- {}", calc.netmask_to_hex());
+        println!("Broadcast address\t- {}", calc.broadcast);
     }
 
     fn format_ipv4_classful_section_bare_address(calc: &IPv4Calculator) {
@@ -371,7 +371,6 @@ impl OutputFormatter {
     }
 
     fn format_ipv4_classful_bitmap_section(calc: &IPv4Calculator) {
-        println!();
         println!("[Classful bitmaps]");
         // Match sipcalc golden output: show classful network address, not host address
         let classful_prefix = match calc.class {
@@ -396,7 +395,6 @@ impl OutputFormatter {
             "Network mask\t\t- {bits}",
             bits = classful_calc.get_netmask_binary()
         );
-        println!();
     }
 
     fn format_ipv4_networks_section(calc: &IPv4Calculator) {
@@ -431,12 +429,12 @@ impl OutputFormatter {
     fn format_ipv4_wildcard_section(calc: &IPv4Calculator) {
         println!("[WILDCARD]");
         println!("Wildcard\t\t- {}", calc.network);
-        
+
         // Calculate the inverse of the IP address itself (not the subnet mask)
         let addr_int: u32 = calc.address.into();
         let inverted_addr = std::net::Ipv4Addr::from(!addr_int);
         println!("Network mask\t\t- {}", inverted_addr);
-        
+
         // Calculate number of 1-bits in the inverted address
         let inverted_bits = (!addr_int).count_ones();
         println!("Network mask (bits)\t- {}", inverted_bits);
@@ -490,9 +488,9 @@ impl OutputFormatter {
             // Expanded v4inv6: first five segments zero, then ffff and dotted IPv4
             let ipv4_part = compressed_v4.trim_start_matches("::");
             let exp_v4inv6 = format!("0000:0000:0000:0000:0000:{ipv4_part}");
-            println!("Expanded v4inv6 address - {exp_v4inv6}");
-            println!("Compr. v4inv6 address - {compressed_v4}");
-            println!("Comment - {}", calc.address_type);
+            println!("Expanded v4inv6 address\t- {exp_v4inv6}");
+            println!("Compr. v4inv6 address\t- {compressed_v4}");
+            println!("Comment\t\t\t- {}", calc.address_type);
         }
         println!();
         println!("-");
@@ -500,7 +498,8 @@ impl OutputFormatter {
 
     fn format_ipv6_reverse_section(calc: &IPv6Calculator) {
         println!("[IPV6 DNS]");
-        println!("Reverse DNS (ip6.arpa) - {}", calc.get_reverse_dns());
+        println!("Reverse DNS (ip6.arpa)\t-");
+        println!("{}", calc.get_reverse_dns());
         println!();
         println!("-");
     }
@@ -529,16 +528,13 @@ impl OutputFormatter {
 
     fn format_ipv6_info_section(calc: &IPv6Calculator) {
         println!("[IPV6 INFO]");
-        println!("Expanded Address        - {}", calc.get_expanded_address());
-        println!(
-            "Compressed address      - {}",
-            calc.get_compressed_address()
-        );
+        println!("Expanded Address\t- {}", calc.get_expanded_address());
+        println!("Compressed address\t- {}", calc.get_compressed_address());
 
         // Network prefix
         let net_expanded = Self::format_ipv6_addr_expanded_no_padding(&calc.network);
         println!(
-            "Subnet prefix (masked)  - {net_expanded}/{}",
+            "Subnet prefix (masked)\t- {net_expanded}/{}",
             calc.prefix_length
         );
 
@@ -546,21 +542,22 @@ impl OutputFormatter {
         let host_id = calc.get_host_id();
         let host_expanded = Self::format_ipv6_addr_expanded_no_padding(&host_id);
         println!(
-            "Address ID (masked)     - {host_expanded}/{}",
+            "Address ID (masked)\t- {host_expanded}/{}",
             calc.prefix_length
         );
 
         // Prefix mask
         let mask_expanded = Self::format_ipv6_addr_expanded_no_padding(&calc.prefix_mask);
-        println!("Prefix address          - {mask_expanded}");
-        println!("Prefix length           - {}", calc.prefix_length);
-        println!("Address type            - {}", calc.address_type);
+        println!("Prefix address\t\t- {mask_expanded}");
+        println!("Prefix length\t\t- {}", calc.prefix_length);
+        println!("Address type\t\t- {}", calc.address_type);
 
         // Network range
         let (start, end) = calc.get_network_range();
         let start_exp = Self::format_ipv6_addr_expanded_padding(&start);
         let end_exp = Self::format_ipv6_addr_expanded_padding(&end);
-        println!("Network range           - {start_exp} - {end_exp}");
+        println!("Network range\t\t- {start_exp} -");
+        println!("\t\t\t  {end_exp}");
 
         println!();
         println!("-");
