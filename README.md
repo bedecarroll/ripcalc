@@ -38,7 +38,7 @@ The table below summarizes feature parity between **ripcalc** and the original *
 | IPv4 dotted decimal mask          | ✓       | ✓       |
 | IPv4 hex netmask                  | ✓       | ✓       |
 | IPv4 subnet splitting (`-s`)      | ✓       | ✓       |
-| IPv4 extra subnets (`-n`)         | ✗       | ✓       |
+| IPv4 extra subnets (`-n`)         | ✓       | ✓       |
 | IPv4 classful info (`-c`)         | ✓       | ✓       |
 | IPv4 CIDR bitmap (`-b`)           | ✓       | ✓       |
 | IPv4 classful bitmap (`-x`)       | ✓       | ✓       |
