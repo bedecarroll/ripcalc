@@ -163,10 +163,13 @@ fn test_comprehensive_error_handling() {
         // Note: ripcalc currently doesn't set proper exit codes, so we only check for error messages
         // TODO: Fix ripcalc to return non-zero exit codes on errors
         // assert!(!output.status.success(), "Should fail for {description}: {input}");
-        
+
         let stderr = str::from_utf8(&output.stderr).unwrap();
         // Should produce some error message
-        assert!(!stderr.is_empty(), "Should have error message for {description}: {input}");
+        assert!(
+            !stderr.is_empty(),
+            "Should have error message for {description}: {input}"
+        );
     }
 }
 
