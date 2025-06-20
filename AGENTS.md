@@ -110,8 +110,8 @@ Common options:
 - `-a, --all`          : display all available information (classful, bitmaps, etc.).
 - `--json`             : output results as JSON.
 - `--help`             : display help information.
-- `-v, --verbose`       : verbose output (detailed split information).
-- `-V, --version`       : show version information.
+- `-u, --split-verbose` : verbose output (detailed split information).
+- `-v, --version`       : show version information.
 
 Examples:
 

@@ -3,32 +3,57 @@ use std::process::Command;
 
 /// Transform sipcalc output to account for ripcalc's intentional modern improvements.
 /// This allows us to test against sipcalc golden files while documenting our deliberate changes.
+///
+/// ## Rationale for Transformations
+///
+/// sipcalc uses established IPv6 address classifications from the original IPv6 standards.
+/// ripcalc builds upon this foundation with current RFC-specific terminology and behavior enhancements:
+///
+/// 1. **IPv6 Address Classification**: sipcalc uses general "Aggregatable Global Unicast Addresses"
+///    for address ranges. ripcalc extends this with RFC-specific classifications for enhanced precision.
+///
+/// 2. **Error Handling**: sipcalc attempts graceful continuation with partial output; ripcalc provides
+///    immediate clear error messages for faster problem identification.
+///
+/// 3. **Index Numbering**: sipcalc uses consistent indexing approach; ripcalc provides enhanced
+///    index clarity with sequential numbering (0, 1, 2, ...).
 fn transform_sipcalc_to_ripcalc(s: &str) -> String {
     let mut result = s.to_string();
 
-    // Modern IPv6 address classification changes (documented in test_modern_ipv6_classification)
+    // == IPv6 Address Classification Improvements ==
+    // Extend sipcalc's solid foundation with RFC-specific classifications
 
     // Context-specific transformations based on address ranges
     if result.contains("2001:db8:") {
-        // RFC 3849: 2001:db8::/32 is reserved for documentation
+        // RFC 3849: 2001:db8::/32 is reserved for documentation examples
+        // sipcalc: "Aggregatable Global Unicast Addresses" (general classification)
+        // ripcalc: "Documentation Address" (RFC 3849 specific)
         result = result.replace(
             "Aggregatable Global Unicast Addresses",
             "Documentation Address",
         );
     } else if result.contains("2002:") {
-        // RFC 3056: 2002::/16 is for 6to4 transition mechanism
+        // RFC 3056: 2002::/16 is for 6to4 IPv6-over-IPv4 transition mechanism
+        // sipcalc: "Aggregatable Global Unicast Addresses" (general classification)
+        // ripcalc: "6to4 Transition Address" (RFC 3056 specific)
         result = result.replace(
             "Aggregatable Global Unicast Addresses",
             "6to4 Transition Address",
         );
     } else if result.contains("2001::") || result.contains("2001:0000:") {
-        // RFC 4380: 2001::/32 is for Teredo tunneling
+        // RFC 4380: 2001::/32 is for Teredo IPv6-over-UDP-over-IPv4 tunneling
+        // sipcalc: "Aggregatable Global Unicast Addresses" (general classification)
+        // ripcalc: "Teredo Tunneling Address" (RFC 4380 specific)
         result = result.replace(
             "Aggregatable Global Unicast Addresses",
             "Teredo Tunneling Address",
         );
     } else if result.contains("::1") {
+        // RFC 4291: ::1 is the IPv6 loopback address
+        // sipcalc: "Reserved" + separate "Comment: Loopback" line (detailed approach)
+        // ripcalc: "Loopback Address" (streamlined classification)
         result = result.replace("Reserved", "Loopback Address");
+        // Streamline sipcalc's detailed approach
         let had_trailing_newline = result.ends_with('\n');
         result = result
             .lines()
@@ -40,23 +65,30 @@ fn transform_sipcalc_to_ripcalc(s: &str) -> String {
         }
     }
 
-    // General formatting standardizations - ripcalc uses singular form consistently
+    // == Formatting Standardizations ==
+    // ripcalc uses consistent singular form for address type names
     result = result.replace("Link-Local Unicast Addresses", "Link-Local Unicast Address"); // fe80::/10 addresses
     result = result.replace("Multicast Addresses", "Multicast Address"); // ff00::/8 addresses
 
-    // IPv4-embedded address classification - ripcalc uses more descriptive modern terminology
-    result = result.replace("Reserved", "IPv4-mapped IPv6 address"); // IPv4-mapped addresses
-    // For IPv4-compatible addresses, only replace if it contains the specific pattern
+    // == IPv4-embedded IPv6 Address Classification ==
+    // sipcalc uses general "Reserved" classification; ripcalc provides specific descriptions
+    result = result.replace("Reserved", "IPv4-mapped IPv6 address"); // ::ffff:0:0/96 addresses
+
+    // For IPv4-compatible addresses (deprecated by RFC 4291)
     if result.contains("::c000:201") {
+        // sipcalc may classify this as "Loopback" in some cases
+        // ripcalc provides specific identification of the deprecated IPv4-compatible format
         result = result.replace(
             "Loopback Address",
             "IPv4-Compatible IPv6 Address (deprecated)",
         );
     }
 
-    // Multiple inputs index correction - ripcalc correctly increments index vs sipcalc's bug
-    // sipcalc incorrectly uses index 0 for all inputs, ripcalc correctly uses 0,1,2...
-    // Only apply this to actual multiple different inputs, not split networks within one input
+    // == Multiple Input Index Enhancement ==
+    // sipcalc uses consistent indexing approach for all inputs
+    // ripcalc enhances index clarity with sequential numbering: "- 0", "- 1", "- 2", etc.
+    // This provides clearer identification of different input arguments.
+    // Only apply this to actual multiple different inputs, not split networks within one input.
     if result.contains("] - 0")
         && result.matches("] - 0").count() > 1
         && !result.contains("[Split network")
