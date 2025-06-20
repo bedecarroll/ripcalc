@@ -325,61 +325,59 @@ impl IPv6Calculator {
     pub fn get_compressed_address(&self) -> String {
         // Get the 16-bit segments
         let segments = self.address.segments();
-        
+
         // Find the longest run of consecutive zeros
         let (best_start, best_len) = Self::find_longest_zero_run(&segments);
-        
+
         // If no compression is beneficial (runs of 1 or 0), use standard format
         if best_len <= 1 {
-            return segments.iter()
-                .map(|&s| format!("{:x}", s))
+            return segments
+                .iter()
+                .map(|&s| format!("{s:x}"))
                 .collect::<Vec<_>>()
                 .join(":");
         }
-        
+
         let mut parts = Vec::new();
         let mut i = 0;
-        
+
         // Add parts before the compression
         while i < best_start {
             parts.push(format!("{:x}", segments[i]));
             i += 1;
         }
-        
+
         // Add the compression marker
+        parts.push(String::new());
         if best_start == 0 {
             // Compression starts at beginning
-            parts.push("".to_string());
-            parts.push("".to_string());
-        } else {
-            // Compression in middle or end
-            parts.push("".to_string());
+            parts.push(String::new());
         }
-        
+
         // Skip the zero run
         i += best_len;
-        
+
         // Add parts after the compression
         while i < 8 {
             parts.push(format!("{:x}", segments[i]));
             i += 1;
         }
-        
+
         // If compression goes to the end, add an empty string for trailing ::
         if best_start + best_len == 8 && best_start > 0 {
-            parts.push("".to_string());
+            parts.push(String::new());
         }
-        
+
         // Join with colons - empty strings will create the "::" effect
         parts.join(":")
     }
-    
+
     fn find_longest_zero_run(segments: &[u16; 8]) -> (usize, usize) {
         let mut best_start = 0;
         let mut best_len = 0;
         let mut current_start = 0;
         let mut current_len = 0;
-        
+
         for (i, &segment) in segments.iter().enumerate() {
             if segment == 0 {
                 if current_len == 0 {
@@ -394,13 +392,13 @@ impl IPv6Calculator {
                 current_len = 0;
             }
         }
-        
+
         // Check the final run
         if current_len > best_len {
             best_start = current_start;
             best_len = current_len;
         }
-        
+
         (best_start, best_len)
     }
 
