@@ -1,0 +1,15 @@
+-[ipv6 : ::1] - 0
+
+[IPV6 INFO]
+Expanded Address	- 0000:0000:0000:0000:0000:0000:0000:0001
+Compressed address	- ::1
+Subnet prefix (masked)	- 0:0:0:0:0:0:0:1/128
+Address ID (masked)	- 0:0:0:0:0:0:0:0/128
+Prefix address		- ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+Prefix length		- 128
+Address type		- Reserved
+Comment			- Loopback
+Network range		- 0000:0000:0000:0000:0000:0000:0000:0001 -
+			  0000:0000:0000:0000:0000:0000:0000:0001
+
+-

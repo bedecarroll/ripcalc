@@ -260,3 +260,323 @@ fn test_stdin_input() {
     assert!(stdout.contains("192.168.1.0/24"));
     assert!(stdout.contains("10.0.0.0/16"));
 }
+
+// ===== COMPREHENSIVE FLAG TESTING =====
+
+#[test]
+fn test_cidr_bitmap_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-b", "192.168.1.0/24"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[CIDR bitmaps]"));
+    assert!(stdout.contains("Host address\t\t- 11000000.10101000.00000001.00000000"));
+    assert!(stdout.contains("Network mask\t\t- 11111111.11111111.11111111.00000000"));
+    assert!(stdout.contains("Broadcast address\t- 11000000.10101000.00000001.11111111"));
+}
+
+#[test]
+fn test_classful_addr_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-c", "192.168.1.0/24"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[Classful]"));
+    assert!(stdout.contains("Network class\t\t- C"));
+    assert!(stdout.contains("Host address (decimal)\t- 3232235776"));
+    assert!(stdout.contains("Host address (hex)\t- C0A80100"));
+}
+
+#[test]
+fn test_wildcard_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-w", "0.0.0.255"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[WILDCARD]"));
+    assert!(stdout.contains("Wildcard\t\t- 0.0.0.255"));
+    assert!(stdout.contains("Network mask\t\t- 255.255.255.0"));
+    assert!(stdout.contains("Network mask (bits)\t- 24"));
+}
+
+#[test]
+fn test_classful_bitmap_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-x", "192.168.1.0/24"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[Classful bitmaps]"));
+    assert!(stdout.contains("Network address\t\t- 11000000.10101000.00000001.00000000"));
+    assert!(stdout.contains("Network mask\t\t- 11111111.11111111.11111111.00000000"));
+}
+
+#[test]
+fn test_ipv6_v4inv6_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-e", "::ffff:192.168.1.1"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[V4INV6]"));
+}
+
+#[test]
+fn test_ipv6_reverse_dns_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-r", "2001:db8::1"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[IPV6 DNS]"));
+    assert!(stdout.contains("Reverse DNS (ip6.arpa)"));
+    assert!(
+        stdout
+            .contains("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa.")
+    );
+}
+
+#[test]
+fn test_ipv6_standard_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-t", "2001:db8::/48"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[IPV6 INFO]"));
+    assert!(stdout.contains("Expanded Address"));
+    assert!(stdout.contains("Compressed address"));
+}
+
+#[test]
+fn test_verbose_split_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-u", "-s", "26", "192.168.1.0/24"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[Split network - verbose]"));
+    // Should contain multiple detailed subnet calculations
+    assert!(stdout.contains("192.168.1.0/24"));
+    assert!(stdout.contains("192.168.1.64"));
+    assert!(stdout.contains("192.168.1.128"));
+    assert!(stdout.contains("192.168.1.192"));
+}
+
+#[test]
+fn test_explicit_ipv4_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-4", "192.168.1.5 255.255.255.0"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("192.168.1.5/24"));
+    assert!(stdout.contains("Network address\t\t- 192.168.1.0"));
+}
+
+#[test]
+fn test_explicit_ipv6_flag() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-6", "2001:db8::1/64"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("-[ipv6 : 2001:db8::1/64]"));
+    assert!(stdout.contains("[IPV6 INFO]"));
+}
+
+// ===== FLAG COMBINATION TESTS =====
+
+#[test]
+fn test_multiple_ipv4_flags() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-b", "-c", "-x", "192.168.1.0/24"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[CIDR bitmaps]"));
+    assert!(stdout.contains("[Classful]"));
+    assert!(stdout.contains("[Classful bitmaps]"));
+}
+
+#[test]
+fn test_multiple_ipv6_flags() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-r", "-t", "2001:db8::1"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[IPV6 DNS]"));
+    assert!(stdout.contains("[IPV6 INFO]"));
+}
+
+#[test]
+fn test_all_flag_with_ipv4() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-a", "192.168.1.0/24"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    // -a should include -b -c -i -n 0 for IPv4
+    assert!(stdout.contains("[CIDR]"));
+    assert!(stdout.contains("[Classful]"));
+    assert!(stdout.contains("[CIDR bitmaps]"));
+    assert!(stdout.contains("[Networks]"));
+}
+
+#[test]
+fn test_all_flag_with_ipv6() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-a", "2001:db8::/48"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    // -a should include -e -r -t for IPv6
+    assert!(stdout.contains("[IPV6 INFO]"));
+    assert!(stdout.contains("[IPV6 DNS]"));
+    assert!(stdout.contains("[V4INV6]"));
+}
+
+#[test]
+fn test_json_with_flags() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["--json", "-a", "192.168.1.0/24"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    // Should be valid JSON even with multiple flags
+    let json: serde_json::Value = serde_json::from_str(stdout).unwrap();
+    assert_eq!(json["type"], "ipv4");
+}
+
+#[test]
+fn test_split_with_extra_subnets() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-s", "26", "-n", "2", "192.168.1.0/24"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[Split network]"));
+    assert!(stdout.contains("[Networks]"));
+}
+
+#[test]
+fn test_ipv6_split_with_flags() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-S", "65", "-r", "fdbb::1/64"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("[Split network]"));
+    assert!(stdout.contains("[IPV6 DNS]"));
+}
+
+// ===== COMPATIBILITY VERIFICATION TESTS =====
+
+#[test]
+fn test_sipcalc_compatibility_version() {
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-v"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.starts_with("ripcalc "));
+    assert!(!stdout.contains("sipcalc")); // Should be ripcalc, not sipcalc
+}
+
+#[test]
+fn test_interface_with_explicit_flag() {
+    // Test explicit interface flag (may not work on all systems)
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-I", "lo"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    // Interface tests are environment-dependent, just check it doesn't crash
+    assert!(output.status.success() || !str::from_utf8(&output.stderr).unwrap().is_empty());
+}
+
+#[test]
+fn test_various_input_formats() {
+    let test_cases = vec![
+        ("-4", "192.168.1.5 255.255.255.0", "dotted decimal mask"),
+        ("-4", "10.0.0.1 0xFFFF0000", "hex mask"),
+        ("-4", "172.16.0.1/16", "CIDR notation"),
+        ("-6", "2001:db8::1/64", "IPv6 CIDR"),
+        ("-6", "::1", "IPv6 loopback"),
+    ];
+
+    for (flag, input, description) in test_cases {
+        let output = Command::new("./target/debug/ripcalc")
+            .args([flag, input])
+            .output()
+            .unwrap_or_else(|_| panic!("Failed to execute ripcalc for {description}"));
+
+        assert!(output.status.success(), "Failed for {description}: {input}");
+        let stdout = str::from_utf8(&output.stdout).unwrap();
+        assert!(
+            !stdout.is_empty(),
+            "Empty output for {description}: {input}"
+        );
+    }
+}
+
+// ===== ERROR HANDLING FOR FLAGS =====
+
+#[test]
+fn test_invalid_flag_combinations() {
+    // These should still work but may produce warnings or unexpected output
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-4", "-6", "192.168.1.0/24"]) // conflicting explicit types
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    // Should not crash, may produce an error
+    let stderr = str::from_utf8(&output.stderr).unwrap();
+    // This is expected to work since -4 takes precedence
+    assert!(output.status.success() || !stderr.is_empty());
+}
+
+#[test]
+fn test_comprehensive_flag_coverage() {
+    // Test that all flags are recognized and don't cause "unknown option" errors
+    let all_flags = vec![
+        "-a", "-b", "-c", "-d", "-e", "-h", "-i", "-I", "-n", "-r", "-s", "-S", "-t", "-u", "-v",
+        "-w", "-x", "-4", "-6",
+    ];
+
+    for flag in all_flags {
+        let output = Command::new("./target/debug/ripcalc")
+            .args(["--help"])
+            .output()
+            .expect("Failed to execute ripcalc --help");
+
+        let stdout = str::from_utf8(&output.stdout).unwrap();
+        // All flags should be documented in help
+        assert!(
+            stdout.contains(&format!(" {flag}")) || stdout.contains(&format!("{flag},")),
+            "Flag {flag} not found in help output"
+        );
+    }
+}

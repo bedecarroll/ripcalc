@@ -1,0 +1,14 @@
+-[ipv6 : fc00::/7] - 0
+
+[IPV6 INFO]
+Expanded Address	- fc00:0000:0000:0000:0000:0000:0000:0000
+Compressed address	- fc00::
+Subnet prefix (masked)	- fc00:0:0:0:0:0:0:0/7
+Address ID (masked)	- 0:0:0:0:0:0:0:0/7
+Prefix address		- fe00:0:0:0:0:0:0:0
+Prefix length		- 7
+Address type		- Unassigned
+Network range		- fc00:0000:0000:0000:0000:0000:0000:0000 -
+			  fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+
+-

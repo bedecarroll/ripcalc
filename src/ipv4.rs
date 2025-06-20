@@ -25,7 +25,7 @@ pub enum NetworkClass {
 
 impl IPv4Calculator {
     pub fn new(input: &str) -> Result<Self> {
-        let (address, prefix_length, is_bare_address) = Self::parse_input(input)?;
+        let (address, prefix_length, is_bare_address) = Self::parse_input(input, None)?;
 
         let netmask = Self::prefix_to_netmask(prefix_length);
         let network = Self::calculate_network(address, netmask);
@@ -45,7 +45,28 @@ impl IPv4Calculator {
         })
     }
 
-    fn parse_input(input: &str) -> Result<(Ipv4Addr, u8, bool)> {
+    pub fn new_with_flags(input: &str, ipv4_flags: Option<crate::IPv4Flags>) -> Result<Self> {
+        let (address, prefix_length, is_bare_address) = Self::parse_input(input, ipv4_flags)?;
+
+        let netmask = Self::prefix_to_netmask(prefix_length);
+        let network = Self::calculate_network(address, netmask);
+        let broadcast = Self::calculate_broadcast(network, netmask);
+        let wildcard = Self::calculate_wildcard(netmask);
+        let class = Self::determine_class(address);
+
+        Ok(Self {
+            address,
+            prefix_length,
+            netmask,
+            network,
+            broadcast,
+            wildcard,
+            class,
+            is_bare_address,
+        })
+    }
+
+    fn parse_input(input: &str, ipv4_flags: Option<crate::IPv4Flags>) -> Result<(Ipv4Addr, u8, bool)> {
         if input.contains('/') {
             // CIDR notation
             let parts: Vec<&str> = input.split('/').collect();
@@ -86,9 +107,9 @@ impl IPv4Calculator {
 
             Ok((address, prefix_length, false))
         } else {
-            // Just an IP address, use classful prefix but mark as bare address
+            // Just an IP address - determine prefix based on flags
             let address = Ipv4Addr::from_str(input)?;
-            let prefix_length = Self::get_classful_prefix(address);
+            let prefix_length = Self::get_prefix_for_bare_address(address, ipv4_flags);
             Ok((address, prefix_length, true))
         }
     }
@@ -144,6 +165,25 @@ impl IPv4Calculator {
             NetworkClass::C => 24,
             NetworkClass::D | NetworkClass::E => 32,
         }
+    }
+
+    fn get_prefix_for_bare_address(address: Ipv4Addr, ipv4_flags: Option<crate::IPv4Flags>) -> u8 {
+        // Determine if we should use /32 (sipcalc-compatible) or classful behavior
+        if let Some(flags) = ipv4_flags {
+            // When CLASSFUL_ADDR flag is present, always use classful prefixes (highest priority)
+            if flags.contains(crate::IPv4Flags::CLASSFUL_ADDR) {
+                return Self::get_classful_prefix(address);
+            }
+            
+            // When CIDR_BITMAP flag is present, use /32 for bare addresses (matches sipcalc behavior)
+            // This covers the case where -b flag makes sipcalc treat bare addresses as /32 hosts
+            if flags.contains(crate::IPv4Flags::CIDR_BITMAP) {
+                return 32;
+            }
+        }
+        
+        // Default behavior: use classful prefixes (maintains backward compatibility)
+        Self::get_classful_prefix(address)
     }
 
     pub fn get_host_count(&self) -> u64 {

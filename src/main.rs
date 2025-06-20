@@ -17,7 +17,7 @@ impl Default for IPv4Flags {
 }
 
 bitflags! {
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     /// Flags controlling IPv4 output options.
     pub struct IPv4Flags: u8 {
         /// Show CIDR bitmaps.
@@ -35,6 +35,7 @@ bitflags! {
 struct IPv6Flags {
     v4_in_v6: bool,
     v6_reverse: bool,
+    v6_standard: bool,
 }
 
 #[derive(Debug, Default)]
@@ -299,6 +300,7 @@ fn build_config(matches: &clap::ArgMatches) -> Config {
         ipv6: IPv6Flags {
             v4_in_v6: matches.get_flag("v4inv6"),
             v6_reverse: matches.get_flag("v6rev"),
+            v6_standard: matches.get_flag("v6-standard"),
         },
         input: InputFlags {
             dns_resolve: matches.get_flag("resolve"),
@@ -353,7 +355,7 @@ fn process_input(input: &str, index: usize, config: &Config) -> Result<()> {
     // Check if this input was explicitly specified with a type flag
     if config.explicit_ipv4.contains(&input.to_string()) {
         // Force IPv4 parsing even if it contains spaces
-        if let Ok(ipv4_calc) = IPv4Calculator::new(input) {
+        if let Ok(ipv4_calc) = IPv4Calculator::new_with_flags(input, Some(config.ipv4)) {
             formatter.format_ipv4(&ipv4_calc, index, config)?;
         } else {
             return Err(anyhow::anyhow!("Unable to parse '{input}' as IPv4"));
@@ -400,7 +402,7 @@ fn process_input(input: &str, index: usize, config: &Config) -> Result<()> {
 
     // For inputs without spaces, use the original parsing order
     // Try to parse as IPv4 (CIDR notation or single address)
-    if let Ok(ipv4_calc) = IPv4Calculator::new(input) {
+    if let Ok(ipv4_calc) = IPv4Calculator::new_with_flags(input, Some(config.ipv4)) {
         formatter.format_ipv4(&ipv4_calc, index, config)?;
     }
     // Try to parse as IPv6

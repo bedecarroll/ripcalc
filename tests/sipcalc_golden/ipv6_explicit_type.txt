@@ -1,0 +1,14 @@
+-[ipv6 : 2001:db8::1/64] - 0
+
+[IPV6 INFO]
+Expanded Address	- 2001:0db8:0000:0000:0000:0000:0000:0001
+Compressed address	- 2001:db8::1
+Subnet prefix (masked)	- 2001:db8:0:0:0:0:0:0/64
+Address ID (masked)	- 0:0:0:0:0:0:0:1/64
+Prefix address		- ffff:ffff:ffff:ffff:0:0:0:0
+Prefix length		- 64
+Address type		- Aggregatable Global Unicast Addresses
+Network range		- 2001:0db8:0000:0000:0000:0000:0000:0000 -
+			  2001:0db8:0000:0000:ffff:ffff:ffff:ffff
+
+-

@@ -202,28 +202,77 @@ impl OutputFormatter {
                 Self::format_ipv4_networks_section(calc);
             }
         }
-        // Handle specific operations
-        else if config.split_ipv4.is_some() {
-            // Only split networks
-            Self::format_ipv4_split_section(calc, config);
-        } else if config.extra_subnets.is_some() {
-            // Only extra subnets
+        // Handle specific operations and flags
+        else {
+            let mut sections_shown = false;
+
+            // Check if any operations will be performed
+            let has_operations = config.split_ipv4.is_some() || config.extra_subnets.is_some();
+
+            // Check if any specific display flags are set
+            let has_specific_flags = config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR)
+                || config.ipv4.contains(crate::IPv4Flags::CIDR_BITMAP)
+                || config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP)
+                || config.ipv4.contains(crate::IPv4Flags::WILDCARD);
+
+            // Show default CIDR section if no operations and no specific flags are set
+            if !has_operations && !has_specific_flags {
+                Self::format_ipv4_cidr_section(calc);
+                sections_shown = true;
+            }
+
+            // Show classful information if requested
+            if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR) {
+                if sections_shown {
+                    println!();
+                }
+                Self::format_ipv4_classful_section(calc);
+                sections_shown = true;
+            }
+
+            // Show classful bitmaps if requested
+            if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP) {
+                if sections_shown {
+                    println!();
+                }
+                Self::format_ipv4_classful_bitmap_section(calc);
+                sections_shown = true;
+            }
+
+            // Show CIDR bitmaps if requested
+            if config.ipv4.contains(crate::IPv4Flags::CIDR_BITMAP) {
+                if sections_shown {
+                    println!();
+                }
+                Self::format_ipv4_cidr_bitmap_section(calc);
+                sections_shown = true;
+            }
+
+            // Show wildcard information if requested
+            if config.ipv4.contains(crate::IPv4Flags::WILDCARD) {
+                if sections_shown {
+                    println!();
+                }
+                Self::format_ipv4_wildcard_section(calc);
+            }
+        }
+
+        // Show operations (they come after base sections) - for ALL cases
+        let mut sections_shown = config.output.all_info; // all_info always shows sections
+
+        if config.extra_subnets.is_some() {
+            if sections_shown {
+                println!();
+            }
             Self::format_ipv4_extra_subnets_section(calc, config);
-        } else if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR) {
-            // Only classful information
-            Self::format_ipv4_classful_section(calc);
-        } else if config.ipv4.contains(crate::IPv4Flags::CIDR_BITMAP) {
-            // Only CIDR bitmaps
-            Self::format_ipv4_cidr_bitmap_section(calc);
-        } else if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP) {
-            // Only classful bitmaps
-            Self::format_ipv4_classful_bitmap_section(calc);
-        } else if config.ipv4.contains(crate::IPv4Flags::WILDCARD) {
-            // Only wildcard information
-            Self::format_ipv4_wildcard_section(calc);
-        } else {
-            // Default: show CIDR section
-            Self::format_ipv4_cidr_section(calc);
+            sections_shown = true;
+        }
+
+        if config.split_ipv4.is_some() {
+            if sections_shown {
+                println!();
+            }
+            Self::format_ipv4_split_section(calc, config);
         }
         // End of section separator
         println!();
@@ -454,7 +503,7 @@ impl OutputFormatter {
 
     fn format_ipv4_wildcard_section(calc: &IPv4Calculator) {
         println!("[WILDCARD]");
-        println!("Wildcard\t\t- {}", calc.network);
+        println!("Wildcard\t\t- {}", calc.address);
 
         // Calculate the inverse of the IP address itself (not the subnet mask)
         let addr_int: u32 = calc.address.into();
@@ -524,14 +573,88 @@ impl OutputFormatter {
     fn format_ipv6_text_content(calc: &IPv6Calculator, config: &Config) {
         println!();
 
-        if config.ipv6.v4_in_v6 {
+        // Handle -a flag for IPv6 (equivalent to -e -r -t)
+        if config.output.all_info {
+            Self::format_ipv6_info_section(calc);
+            println!();
             Self::format_ipv6_v4inv6_section(calc);
-        } else if config.ipv6.v6_reverse {
+            println!();
             Self::format_ipv6_reverse_section(calc);
-        } else if let Some(ref split_prefix) = config.split_ipv6 {
+            return;
+        }
+
+        // Handle IPv6 operations and flags
+        let mut sections_shown = false;
+
+        // Check if any specific IPv6 flags are set
+        let has_specific_flags =
+            config.ipv6.v4_in_v6 || config.ipv6.v6_reverse || config.ipv6.v6_standard;
+
+        if let Some(ref split_prefix) = config.split_ipv6 {
+            // Show other sections first, then split
+            if has_specific_flags {
+                // Show IPv6 standard info if explicitly requested
+                if config.ipv6.v6_standard {
+                    Self::format_ipv6_info_section(calc);
+                    sections_shown = true;
+                }
+
+                // Show v4-in-v6 information if requested
+                if config.ipv6.v4_in_v6 {
+                    if sections_shown {
+                        println!();
+                    }
+                    Self::format_ipv6_v4inv6_section(calc);
+                    sections_shown = true;
+                }
+
+                // Show reverse DNS information if requested
+                if config.ipv6.v6_reverse {
+                    if sections_shown {
+                        println!();
+                    }
+                    Self::format_ipv6_reverse_section(calc);
+                    sections_shown = true;
+                }
+
+                if sections_shown {
+                    println!();
+                }
+            }
+
             Self::format_ipv6_split_section(calc, split_prefix);
         } else {
-            Self::format_ipv6_info_section(calc);
+            // Show default IPv6 info section if no specific flags are set
+            if !has_specific_flags {
+                Self::format_ipv6_info_section(calc);
+                sections_shown = true;
+            }
+
+            // Show IPv6 standard info if explicitly requested
+            if config.ipv6.v6_standard {
+                if sections_shown {
+                    println!();
+                }
+                Self::format_ipv6_info_section(calc);
+                sections_shown = true;
+            }
+
+            // Show v4-in-v6 information if requested
+            if config.ipv6.v4_in_v6 {
+                if sections_shown {
+                    println!();
+                }
+                Self::format_ipv6_v4inv6_section(calc);
+                sections_shown = true;
+            }
+
+            // Show reverse DNS information if requested
+            if config.ipv6.v6_reverse {
+                if sections_shown {
+                    println!();
+                }
+                Self::format_ipv6_reverse_section(calc);
+            }
         }
 
         // End of section separator

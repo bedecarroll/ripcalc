@@ -1,0 +1,24 @@
+-[ipv4 : 192.168.1.0/24] - 0
+
+[Classful]
+Host address		- 192.168.1.0
+Host address (decimal)	- 3232235776
+Host address (hex)	- C0A80100
+Network address		- 192.168.1.0
+Network class		- C
+Network mask		- 255.255.255.0
+Network mask (hex)	- FFFFFF00
+Broadcast address	- 192.168.1.255
+
+[CIDR bitmaps]
+Host address		- 11000000.10101000.00000001.00000000
+Network address		- 11000000.10101000.00000001.00000000
+Network mask		- 11111111.11111111.11111111.00000000
+Broadcast address	- 11000000.10101000.00000001.11111111
+Cisco wildcard		- 00000000.00000000.00000000.11111111
+Network range		- 11000000.10101000.00000001.00000000 -
+			  11000000.10101000.00000001.11111111
+Usable range		- 11000000.10101000.00000001.00000001 -
+			  11000000.10101000.00000001.11111110
+
+-
