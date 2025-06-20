@@ -7,6 +7,7 @@ use std::io::{self, BufRead};
 struct OutputFlags {
     json: bool,
     all_info: bool,
+    split_verbose: bool,
 }
 // Default for IPv4Flags: empty flags
 impl Default for IPv4Flags {
@@ -292,6 +293,7 @@ fn build_config(matches: &clap::ArgMatches) -> Config {
         output: OutputFlags {
             json: matches.get_flag("json"),
             all_info: matches.get_flag("all"),
+            split_verbose: matches.get_flag("split-verbose"),
         },
         ipv4: ipv4_flags,
         ipv6: IPv6Flags {

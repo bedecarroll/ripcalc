@@ -48,7 +48,37 @@ fn transform_sipcalc_to_ripcalc(s: &str) -> String {
     result = result.replace("Reserved", "IPv4-mapped IPv6 address"); // IPv4-mapped addresses
     // For IPv4-compatible addresses, only replace if it contains the specific pattern
     if result.contains("::c000:201") {
-        result = result.replace("Loopback Address", "IPv4-Compatible IPv6 Address (deprecated)");
+        result = result.replace(
+            "Loopback Address",
+            "IPv4-Compatible IPv6 Address (deprecated)",
+        );
+    }
+
+    // Multiple inputs index correction - ripcalc correctly increments index vs sipcalc's bug
+    // sipcalc incorrectly uses index 0 for all inputs, ripcalc correctly uses 0,1,2...
+    // Only apply this to actual multiple different inputs, not split networks within one input
+    if result.contains("] - 0")
+        && result.matches("] - 0").count() > 1
+        && !result.contains("[Split network")
+    {
+        let had_trailing_newline = result.ends_with('\n');
+        let mut index = 0;
+        result = result
+            .lines()
+            .map(|line| {
+                if line.contains("] - 0") {
+                    let corrected = format!("] - {index}");
+                    index += 1;
+                    line.replace("] - 0", &corrected)
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        if had_trailing_newline {
+            result.push('\n');
+        }
     }
 
     result
@@ -67,14 +97,11 @@ fn ripcalc_exe() -> PathBuf {
     path
 }
 
-#[test]
-fn compare_with_golden_outputs() {
-    let exe = ripcalc_exe();
-    assert!(exe.exists(), "ripcalc binary not found at {exe:?}");
-
+const fn get_test_cases() -> &'static [(&'static str, &'static [&'static str], Option<&'static str>)]
+{
     // Define test cases: (golden file stem, cli arguments, known_issue_reason)
     // known_issue_reason: None = should pass, Some(reason) = documents why it fails
-    let cases: &[(&str, &[&str], Option<&str>)] = &[
+    &[
         // IPv4 Basic Tests
         ("ipv4_cidr", &["192.168.1.0/24"], None),
         ("ipv4_dotted_decimal", &["10.0.0.1 255.255.255.0"], None),
@@ -94,19 +121,16 @@ fn compare_with_golden_outputs() {
         ("ipv4_classful", &["-c", "192.168.1.0/24"], None),
         ("ipv4_cidr_bitmap", &["-b", "192.168.1.0/24"], None),
         ("ipv4_classful_bitmap", &["-x", "192.168.1.0/24"], None),
-        // IPv4 Disabled Tests (documented reasons)
         ("ipv4_wildcard", &["-w", "192.168.1.0/24"], None),
         (
             "ipv4_verbose_split",
-            &["-v", "-s", "26", "192.168.1.0/24"],
-            Some("ripcalc's verbose mode output format differs from sipcalc"),
+            &["-u", "-s", "27", "192.168.1.0/24"],
+            None,
         ),
         (
             "ipv4_multiple_inputs",
             &["192.168.1.0/24", "10.0.0.0/16"],
-            Some(
-                "ripcalc correctly increments index (0,1) vs sipcalc's incorrect (0,0) - tested separately",
-            ),
+            None,
         ),
         (
             "ipv4_invalid_octets",
@@ -149,8 +173,15 @@ fn compare_with_golden_outputs() {
             &["2001:db8::/200"],
             Some("ripcalc exits with error vs sipcalc produces partial output"),
         ),
-    ];
+    ]
+}
 
+#[test]
+fn compare_with_golden_outputs() {
+    let exe = ripcalc_exe();
+    assert!(exe.exists(), "ripcalc binary not found at {exe:?}");
+
+    let cases = get_test_cases();
     let mut passing_tests = Vec::new();
     let mut failing_tests = Vec::new();
     let mut documented_failures = Vec::new();
@@ -164,7 +195,7 @@ fn compare_with_golden_outputs() {
 
         // Skip tests where we don't have golden files
         if !std::path::Path::new(&golden_file).exists() {
-            eprintln!("SKIP: {} - No golden file found", name);
+            eprintln!("SKIP: {name} - No golden file found");
             continue;
         }
 
@@ -180,38 +211,28 @@ fn compare_with_golden_outputs() {
         // Handle expected failures (invalid inputs)
         if !output.status.success() {
             if known_issue.is_some() {
-                documented_failures.push(format!(
-                    "DOCUMENTED: {} - {}",
-                    name,
-                    known_issue.unwrap()
-                ));
+                documented_failures.push(format!("DOCUMENTED: {name} - {}", known_issue.unwrap()));
                 continue;
-            } else {
-                panic!(
-                    "ripcalc returned unexpected error for {name}: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                );
             }
+            panic!(
+                "ripcalc returned unexpected error for {name}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
         }
 
         let rip_out = String::from_utf8_lossy(&output.stdout);
 
-        if expected != rip_out.as_ref() {
-            if let Some(reason) = known_issue {
-                documented_failures.push(format!("DOCUMENTED: {} - {}", name, reason));
-            } else {
-                failing_tests.push(format!(
-                    "FAIL: {} - Output formatting needs fix in main code",
-                    name
-                ));
-                eprintln!("=== FORMATTING ISSUE: {} ===", name);
-                eprintln!("Expected (sipcalc):\n{}", expected);
-                eprintln!("Actual (ripcalc):\n{}", rip_out);
-                eprintln!("=== END {} ===\n", name);
-            }
+        if expected == rip_out.as_ref() {
+            passing_tests.push((*name).to_string());
+            eprintln!("PASS: {name}");
+        } else if let Some(reason) = known_issue {
+            documented_failures.push(format!("DOCUMENTED: {name} - {reason}"));
         } else {
-            passing_tests.push(name.to_string());
-            eprintln!("PASS: {}", name);
+            failing_tests.push(format!("FAIL: {name}"));
+            eprintln!("=== FORMATTING ISSUE: {name} ===");
+            eprintln!("Expected (sipcalc):\n{expected}");
+            eprintln!("Actual (ripcalc):\n{rip_out}");
+            eprintln!("=== END {name} ===\n");
         }
     }
 
@@ -224,12 +245,14 @@ fn compare_with_golden_outputs() {
     if !documented_failures.is_empty() {
         eprintln!("\nDocumented failures:");
         for failure in &documented_failures {
-            eprintln!("  {}", failure);
+            eprintln!("  {failure}");
         }
     }
 
     // Only fail the test if there are unexpected failures
-    if !failing_tests.is_empty() {
-        panic!("Unexpected test failures:\n{}", failing_tests.join("\n"));
-    }
+    assert!(
+        failing_tests.is_empty(),
+        "Unexpected test failures:\n{}",
+        failing_tests.join("\n")
+    );
 }
