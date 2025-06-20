@@ -11,6 +11,7 @@ pub struct IPv4Calculator {
     pub broadcast: Ipv4Addr,
     pub wildcard: Ipv4Addr,
     pub class: NetworkClass,
+    pub is_bare_address: bool, // True if input was just an IP without CIDR notation
 }
 
 #[derive(Debug, Clone)]
@@ -24,7 +25,7 @@ pub enum NetworkClass {
 
 impl IPv4Calculator {
     pub fn new(input: &str) -> Result<Self> {
-        let (address, prefix_length) = Self::parse_input(input)?;
+        let (address, prefix_length, is_bare_address) = Self::parse_input(input)?;
 
         let netmask = Self::prefix_to_netmask(prefix_length);
         let network = Self::calculate_network(address, netmask);
@@ -40,10 +41,11 @@ impl IPv4Calculator {
             broadcast,
             wildcard,
             class,
+            is_bare_address,
         })
     }
 
-    fn parse_input(input: &str) -> Result<(Ipv4Addr, u8)> {
+    fn parse_input(input: &str) -> Result<(Ipv4Addr, u8, bool)> {
         if input.contains('/') {
             // CIDR notation
             let parts: Vec<&str> = input.split('/').collect();
@@ -58,7 +60,7 @@ impl IPv4Calculator {
                 return Err(anyhow!("Invalid prefix length"));
             }
 
-            Ok((address, prefix_length))
+            Ok((address, prefix_length, false))
         } else if input.contains(' ') {
             // Address with separate netmask
             let parts: Vec<&str> = input.split_whitespace().collect();
@@ -82,12 +84,12 @@ impl IPv4Calculator {
                 netmask_str.parse()?
             };
 
-            Ok((address, prefix_length))
+            Ok((address, prefix_length, false))
         } else {
-            // Just an IP address, try to determine classful mask
+            // Just an IP address, use classful prefix but mark as bare address
             let address = Ipv4Addr::from_str(input)?;
             let prefix_length = Self::get_classful_prefix(address);
-            Ok((address, prefix_length))
+            Ok((address, prefix_length, true))
         }
     }
 
@@ -220,6 +222,12 @@ impl IPv4Calculator {
         }
 
         Ok(subnets)
+    }
+
+    /// Create a host-specific (/32) calculator for this address
+    pub fn as_host(&self) -> Result<Self> {
+        let cidr = format!("{}/32", self.address);
+        Self::new(&cidr)
     }
 
     pub fn get_extra_subnets(&self, num_subnets: u32) -> Vec<Self> {

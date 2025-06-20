@@ -141,12 +141,22 @@ impl OutputFormatter {
     /// Format IPv4 output in text mode.
     pub fn format_ipv4_text(calc: &IPv4Calculator, index: usize, config: &Config) {
         // Inline formatting using named arguments
-        println!(
-            "-[ipv4 : {address}/{prefix}] - {idx}",
-            address = calc.address,
-            prefix = calc.prefix_length,
-            idx = index
-        );
+        if calc.is_bare_address {
+            // For bare addresses, show just the IP address (like sipcalc)
+            println!(
+                "-[ipv4 : {address}] - {idx}",
+                address = calc.address,
+                idx = index
+            );
+        } else {
+            // For explicit CIDR notation, show IP/prefix
+            println!(
+                "-[ipv4 : {address}/{prefix}] - {idx}",
+                address = calc.address,
+                prefix = calc.prefix_length,
+                idx = index
+            );
+        }
         // Delegate to text content formatter
         Self::format_ipv4_text_content(calc, config);
     }
@@ -156,11 +166,31 @@ impl OutputFormatter {
 
         // Handle -a (all info) flag - show multiple sections
         if config.output.all_info {
-            Self::format_ipv4_classful_section(calc);
-            Self::format_ipv4_cidr_section(calc);
-            Self::format_ipv4_classful_bitmap_section(calc);
-            Self::format_ipv4_cidr_bitmap_section(calc);
-            Self::format_ipv4_networks_section(calc);
+            if calc.is_bare_address {
+                // For bare addresses like "1.1.1.1", show both classful and host interpretations
+                Self::format_ipv4_classful_section_bare_address(calc);
+
+                // Create and show the host-specific (/32) interpretation
+                if let Ok(host_calc) = calc.as_host() {
+                    Self::format_ipv4_cidr_section(&host_calc);
+                    Self::format_ipv4_classful_bitmap_section(calc);
+                    Self::format_ipv4_cidr_bitmap_section(&host_calc);
+                    Self::format_ipv4_networks_section_for_bare_address(&host_calc);
+                } else {
+                    // Fallback to regular formatting if host calc fails
+                    Self::format_ipv4_cidr_section(calc);
+                    Self::format_ipv4_classful_bitmap_section(calc);
+                    Self::format_ipv4_cidr_bitmap_section(calc);
+                    Self::format_ipv4_networks_section(calc);
+                }
+            } else {
+                // For explicit CIDR notation, show normal sections
+                Self::format_ipv4_classful_section(calc);
+                Self::format_ipv4_cidr_section(calc);
+                Self::format_ipv4_classful_bitmap_section(calc);
+                Self::format_ipv4_cidr_bitmap_section(calc);
+                Self::format_ipv4_networks_section(calc);
+            }
         }
         // Handle specific operations
         else if config.split_ipv4.is_some() {
@@ -218,7 +248,7 @@ impl OutputFormatter {
     fn format_ipv4_classful_section(calc: &IPv4Calculator) {
         println!();
         println!("[Classful]");
-        // Detailed classful output matching sipcalc golden
+        // Detailed classful output with spaces (for CIDR notation compatibility)
         println!("Host address            - {}", calc.address);
         println!("Host address (decimal)  - {}", calc.to_decimal());
         println!("Host address (hex)      - {}", calc.to_hex());
@@ -227,6 +257,20 @@ impl OutputFormatter {
         println!("Network mask            - {}", calc.netmask);
         println!("Network mask (hex)      - {}", calc.netmask_to_hex());
         println!("Broadcast address       - {}", calc.broadcast);
+    }
+
+    fn format_ipv4_classful_section_bare_address(calc: &IPv4Calculator) {
+        println!("[Classful]");
+        // Detailed classful output matching sipcalc golden (using tabs for spacing)
+        println!("Host address\t\t- {}", calc.address);
+        println!("Host address (decimal)\t- {}", calc.to_decimal());
+        println!("Host address (hex)\t- {}", calc.to_hex());
+        println!("Network address\t\t- {}", calc.network);
+        println!("Network class\t\t- {}", calc.class);
+        println!("Network mask\t\t- {}", calc.netmask);
+        println!("Network mask (hex)\t- {}", calc.netmask_to_hex());
+        println!("Broadcast address\t- {}", calc.broadcast);
+        println!();
     }
 
     fn format_ipv4_split_section(calc: &IPv4Calculator, config: &Config) {
@@ -267,7 +311,6 @@ impl OutputFormatter {
     }
 
     fn format_ipv4_cidr_bitmap_section(calc: &IPv4Calculator) {
-        println!();
         println!("[CIDR bitmaps]");
         // Prepare binary representations
         let host_bits = calc.get_binary_representation();
@@ -308,23 +351,26 @@ impl OutputFormatter {
             .collect::<Vec<_>>()
             .join(".");
         // Output binary bitmap section matching sipcalc
-        println!("Host address - {host_bits}");
-        println!("Network address - {network_bits}");
-        println!("Network mask - {mask_bits}");
-        println!("Broadcast address - {broadcast_bits}");
-        println!("Cisco wildcard - {wildcard_bits}");
-        println!("Network range - {network_bits} - {broadcast_bits}");
-        println!("Usable range - {first_bits} - {last_bits}");
+        println!("Host address\t\t- {host_bits}");
+        println!("Network address\t\t- {network_bits}");
+        println!("Network mask\t\t- {mask_bits}");
+        println!("Broadcast address\t- {broadcast_bits}");
+        println!("Cisco wildcard\t\t- {wildcard_bits}");
+        println!("Network range\t\t- {network_bits} -");
+        println!("\t\t\t  {broadcast_bits}");
+
+        // Only show usable range for networks that have separate usable addresses
+        if calc.prefix_length < 31 {
+            println!("Usable range\t\t- {first_bits} - {last_bits}");
+        }
+
+        println!();
     }
 
     fn format_ipv4_classful_bitmap_section(calc: &IPv4Calculator) {
         println!();
         println!("[Classful bitmaps]");
-        // Match sipcalc golden output: label as Network address for bitmaps
-        println!(
-            "Network address        - {}",
-            calc.get_binary_representation()
-        );
+        // Match sipcalc golden output: show classful network address, not host address
         let classful_prefix = match calc.class {
             crate::ipv4::NetworkClass::A => 8,
             crate::ipv4::NetworkClass::B => 16,
@@ -333,10 +379,21 @@ impl OutputFormatter {
         };
         let classful_calc =
             crate::IPv4Calculator::new(&format!("{}/{}", calc.address, classful_prefix)).unwrap();
+
+        let classful_network_bits = classful_calc
+            .network
+            .octets()
+            .iter()
+            .map(|b| format!("{b:08b}"))
+            .collect::<Vec<_>>()
+            .join(".");
+
+        println!("Network address\t\t- {}", classful_network_bits);
         println!(
-            "Network mask            - {bits}",
+            "Network mask\t\t- {bits}",
             bits = classful_calc.get_netmask_binary()
         );
+        println!();
     }
 
     fn format_ipv4_networks_section(calc: &IPv4Calculator) {
@@ -348,13 +405,36 @@ impl OutputFormatter {
             broadcast = calc.broadcast
         );
     }
+
+    fn format_ipv4_networks_section_for_bare_address(host_calc: &IPv4Calculator) {
+        println!("[Networks]");
+
+        // Show all /32 hosts in the containing /24 network, like sipcalc does
+        let base_addr = host_calc.address.octets();
+        let base_network = u32::from_be_bytes([base_addr[0], base_addr[1], base_addr[2], 0]);
+
+        for i in 0..=255 {
+            let host_ip = std::net::Ipv4Addr::from(base_network + i);
+            let is_current = host_ip == host_calc.address;
+
+            if is_current {
+                println!("Network\t\t\t- {:<15} - {} (current)", host_ip, host_ip);
+            } else {
+                println!("Network\t\t\t- {:<15} - {}", host_ip, host_ip);
+            }
+        }
+    }
     /// Format IPv6 output in text mode.
     pub fn format_ipv6_text(calc: &IPv6Calculator, index: usize, config: &Config) {
         // Inline formatting using named arguments
-        // Header: omit prefix for IPv4-in-IPv6 mapping
+        // Header: omit prefix for IPv4-in-IPv6 mapping or bare addresses
         if config.ipv6.v4_in_v6 {
             println!("-[ipv6 : {}] - {}", calc.address, index);
+        } else if calc.is_bare_address {
+            // For bare addresses, show just the IPv6 address (like sipcalc)
+            println!("-[ipv6 : {}] - {}", calc.address, index);
         } else {
+            // For explicit CIDR notation, show address/prefix
             println!(
                 "-[ipv6 : {address}/{prefix}] - {idx}",
                 address = calc.address,
