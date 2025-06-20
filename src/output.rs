@@ -208,6 +208,9 @@ impl OutputFormatter {
         } else if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP) {
             // Only classful bitmaps
             Self::format_ipv4_classful_bitmap_section(calc);
+        } else if config.ipv4.contains(crate::IPv4Flags::WILDCARD) {
+            // Only wildcard information
+            Self::format_ipv4_wildcard_section(calc);
         } else {
             // Default: show CIDR section
             Self::format_ipv4_cidr_section(calc);
@@ -423,6 +426,20 @@ impl OutputFormatter {
                 println!("Network\t\t\t- {:<15} - {}", host_ip, host_ip);
             }
         }
+    }
+
+    fn format_ipv4_wildcard_section(calc: &IPv4Calculator) {
+        println!("[WILDCARD]");
+        println!("Wildcard\t\t- {}", calc.network);
+        
+        // Calculate the inverse of the IP address itself (not the subnet mask)
+        let addr_int: u32 = calc.address.into();
+        let inverted_addr = std::net::Ipv4Addr::from(!addr_int);
+        println!("Network mask\t\t- {}", inverted_addr);
+        
+        // Calculate number of 1-bits in the inverted address
+        let inverted_bits = (!addr_int).count_ones();
+        println!("Network mask (bits)\t- {}", inverted_bits);
     }
     /// Format IPv6 output in text mode.
     pub fn format_ipv6_text(calc: &IPv6Calculator, index: usize, config: &Config) {

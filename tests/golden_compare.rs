@@ -80,7 +80,7 @@ fn compare_with_golden_outputs() {
         (
             "ipv4_wildcard",
             &["-w", "192.168.1.0/24"],
-            Some("ripcalc doesn't implement sipcalc's wildcard mode"),
+            None,
         ),
         (
             "ipv4_verbose_split",
