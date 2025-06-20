@@ -32,9 +32,9 @@ fn test_basic_ipv6_calculation() {
     // Check for expected output sections
     assert!(stdout.contains("-[ipv6 : 2001:db8::/48] - 0"));
     assert!(stdout.contains("[IPV6 INFO]"));
-    assert!(stdout.contains("Expanded Address        - 2001:0db8:0000:0000:0000:0000:0000:0000"));
-    assert!(stdout.contains("Compressed address      - 2001:db8::"));
-    assert!(stdout.contains("Address type            - Documentation Address"));
+    assert!(stdout.contains("Expanded Address\t- 2001:0db8:0000:0000:0000:0000:0000:0000"));
+    assert!(stdout.contains("Compressed address\t- 2001:db8::"));
+    assert!(stdout.contains("Address type\t\t- Documentation Address"));
     assert!(stdout.contains("Network range"));
 }
 
@@ -86,7 +86,7 @@ fn test_all_info_flag() {
     assert!(stdout.contains("[CIDR]"));
     assert!(stdout.contains("[Classful]"));
     assert!(stdout.contains("[CIDR bitmaps]"));
-    assert!(stdout.contains("Network class           - C"));
+    assert!(stdout.contains("Network class\t\t- C"));
 }
 
 #[test]

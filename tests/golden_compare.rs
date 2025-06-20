@@ -44,6 +44,13 @@ fn transform_sipcalc_to_ripcalc(s: &str) -> String {
     result = result.replace("Link-Local Unicast Addresses", "Link-Local Unicast Address"); // fe80::/10 addresses
     result = result.replace("Multicast Addresses", "Multicast Address"); // ff00::/8 addresses
 
+    // IPv4-embedded address classification - ripcalc uses more descriptive modern terminology
+    result = result.replace("Reserved", "IPv4-mapped IPv6 address"); // IPv4-mapped addresses
+    // For IPv4-compatible addresses, only replace if it contains the specific pattern
+    if result.contains("::c000:201") {
+        result = result.replace("Loopback Address", "IPv4-Compatible IPv6 Address (deprecated)");
+    }
+
     result
 }
 

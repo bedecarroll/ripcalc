@@ -162,57 +162,77 @@ impl OutputFormatter {
     }
 
     fn format_ipv4_text_content(calc: &IPv4Calculator, config: &Config) {
-        println!();
 
         // Handle -a (all info) flag - show multiple sections
         if config.output.all_info {
             if calc.is_bare_address {
                 // For bare addresses like "1.1.1.1", show both classful and host interpretations
+                println!();
                 Self::format_ipv4_classful_section_bare_address(calc);
 
                 // Create and show the host-specific (/32) interpretation
                 if let Ok(host_calc) = calc.as_host() {
+                    println!();
                     Self::format_ipv4_cidr_section(&host_calc);
+                    println!();
                     Self::format_ipv4_classful_bitmap_section(calc);
+                    println!();
                     Self::format_ipv4_cidr_bitmap_section(&host_calc);
+                    println!();
                     Self::format_ipv4_networks_section_for_bare_address(&host_calc);
                 } else {
                     // Fallback to regular formatting if host calc fails
+                    println!();
                     Self::format_ipv4_cidr_section(calc);
+                    println!();
                     Self::format_ipv4_classful_bitmap_section(calc);
+                    println!();
                     Self::format_ipv4_cidr_bitmap_section(calc);
+                    println!();
                     Self::format_ipv4_networks_section(calc);
                 }
             } else {
                 // For explicit CIDR notation, show normal sections
+                println!();
                 Self::format_ipv4_classful_section(calc);
+                println!();
                 Self::format_ipv4_cidr_section(calc);
+                println!();
                 Self::format_ipv4_classful_bitmap_section(calc);
+                println!();
                 Self::format_ipv4_cidr_bitmap_section(calc);
+                println!();
                 Self::format_ipv4_networks_section(calc);
             }
         }
         // Handle specific operations
         else if config.split_ipv4.is_some() {
             // Only split networks
+            println!();
             Self::format_ipv4_split_section(calc, config);
         } else if config.extra_subnets.is_some() {
             // Only extra subnets
+            println!();
             Self::format_ipv4_extra_subnets_section(calc, config);
         } else if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_ADDR) {
             // Only classful information
+            println!();
             Self::format_ipv4_classful_section(calc);
         } else if config.ipv4.contains(crate::IPv4Flags::CIDR_BITMAP) {
             // Only CIDR bitmaps
+            println!();
             Self::format_ipv4_cidr_bitmap_section(calc);
         } else if config.ipv4.contains(crate::IPv4Flags::CLASSFUL_BITMAP) {
             // Only classful bitmaps
+            println!();
             Self::format_ipv4_classful_bitmap_section(calc);
         } else if config.ipv4.contains(crate::IPv4Flags::WILDCARD) {
             // Only wildcard information
+            println!();
             Self::format_ipv4_wildcard_section(calc);
         } else {
             // Default: show CIDR section
+            println!();
             Self::format_ipv4_cidr_section(calc);
         }
         // End of section separator
@@ -249,7 +269,6 @@ impl OutputFormatter {
     }
 
     fn format_ipv4_classful_section(calc: &IPv4Calculator) {
-        println!();
         println!("[Classful]");
         // Detailed classful output with tabs (for CIDR notation compatibility)
         println!("Host address\t\t- {}", calc.address);
@@ -273,7 +292,6 @@ impl OutputFormatter {
         println!("Network mask\t\t- {}", calc.netmask);
         println!("Network mask (hex)\t- {}", calc.netmask_to_hex());
         println!("Broadcast address\t- {}", calc.broadcast);
-        println!();
     }
 
     fn format_ipv4_split_section(calc: &IPv4Calculator, config: &Config) {
@@ -303,11 +321,14 @@ impl OutputFormatter {
                 // Check if this subnet contains the original network
                 if subnet.network == calc.network {
                     println!(
-                        "Network - {} - {} (current)",
+                        "Network\t\t\t- {:<15} - {} (current)",
                         subnet.network, subnet.broadcast
                     );
                 } else {
-                    println!("Network - {} - {}", subnet.network, subnet.broadcast);
+                    println!(
+                        "Network\t\t\t- {:<15} - {}",
+                        subnet.network, subnet.broadcast
+                    );
                 }
             }
         }
@@ -364,10 +385,9 @@ impl OutputFormatter {
 
         // Only show usable range for networks that have separate usable addresses
         if calc.prefix_length < 31 {
-            println!("Usable range\t\t- {first_bits} - {last_bits}");
+            println!("Usable range\t\t- {first_bits} -");
+            println!("\t\t\t  {last_bits}");
         }
-
-        println!();
     }
 
     fn format_ipv4_classful_bitmap_section(calc: &IPv4Calculator) {
@@ -398,7 +418,6 @@ impl OutputFormatter {
     }
 
     fn format_ipv4_networks_section(calc: &IPv4Calculator) {
-        println!();
         println!("[Networks]");
         println!(
             "Network\t\t\t- {network}     - {broadcast} (current)",
@@ -445,14 +464,26 @@ impl OutputFormatter {
         // Header: omit prefix for IPv4-in-IPv6 mapping or bare addresses
         if config.ipv6.v4_in_v6 {
             println!("-[ipv6 : {}] - {}", calc.address, index);
-        } else if calc.is_bare_address {
+        } else if calc.is_bare_address || (calc.prefix_length == 128 && matches!(calc.address_type, crate::ipv6::IPv6AddressType::IPv4Compatible)) {
             // For bare addresses, show just the IPv6 address (like sipcalc)
-            println!("-[ipv6 : {}] - {}", calc.address, index);
+            // For IPv4-embedded addresses, show the original input format
+            let display_addr = if matches!(calc.address_type, crate::ipv6::IPv6AddressType::IPv4Mapped | crate::ipv6::IPv6AddressType::IPv4Compatible) {
+                calc.original_input.split('/').next().unwrap_or(&calc.original_input).to_string()
+            } else {
+                calc.address.to_string()
+            };
+            println!("-[ipv6 : {}] - {}", display_addr, index);
         } else {
             // For explicit CIDR notation, show address/prefix
+            // For IPv4-embedded addresses, use original input format for the address part
+            let display_addr = if matches!(calc.address_type, crate::ipv6::IPv6AddressType::IPv4Mapped | crate::ipv6::IPv6AddressType::IPv4Compatible) {
+                calc.original_input.split('/').next().unwrap_or(&calc.original_input).to_string()
+            } else {
+                calc.address.to_string()
+            };
             println!(
                 "-[ipv6 : {address}/{prefix}] - {idx}",
-                address = calc.address,
+                address = display_addr,
                 prefix = calc.prefix_length,
                 idx = index
             );
@@ -466,20 +497,17 @@ impl OutputFormatter {
 
         if config.ipv6.v4_in_v6 {
             Self::format_ipv6_v4inv6_section(calc);
-            return;
-        }
-
-        if config.ipv6.v6_reverse {
+        } else if config.ipv6.v6_reverse {
             Self::format_ipv6_reverse_section(calc);
-            return;
-        }
-
-        if let Some(ref split_prefix) = config.split_ipv6 {
+        } else if let Some(ref split_prefix) = config.split_ipv6 {
             Self::format_ipv6_split_section(calc, split_prefix);
-            return;
+        } else {
+            Self::format_ipv6_info_section(calc);
         }
 
-        Self::format_ipv6_info_section(calc);
+        // End of section separator
+        println!();
+        println!("-");
     }
 
     fn format_ipv6_v4inv6_section(calc: &IPv6Calculator) {
@@ -492,16 +520,12 @@ impl OutputFormatter {
             println!("Compr. v4inv6 address\t- {compressed_v4}");
             println!("Comment\t\t\t- {}", calc.address_type);
         }
-        println!();
-        println!("-");
     }
 
     fn format_ipv6_reverse_section(calc: &IPv6Calculator) {
         println!("[IPV6 DNS]");
         println!("Reverse DNS (ip6.arpa)\t-");
         println!("{}", calc.get_reverse_dns());
-        println!();
-        println!("-");
     }
 
     fn format_ipv6_split_section(calc: &IPv6Calculator, split_prefix: &str) {
@@ -522,8 +546,6 @@ impl OutputFormatter {
                 println!("Network\t\t\t- {} -\n\t\t\t  {}", start_exp, end_exp);
             }
         }
-        println!();
-        println!("-");
     }
 
     fn format_ipv6_info_section(calc: &IPv6Calculator) {
@@ -558,9 +580,6 @@ impl OutputFormatter {
         let end_exp = Self::format_ipv6_addr_expanded_padding(&end);
         println!("Network range\t\t- {start_exp} -");
         println!("\t\t\t  {end_exp}");
-
-        println!();
-        println!("-");
     }
 
     fn format_ipv6_addr_expanded_padding(addr: &std::net::Ipv6Addr) -> String {
