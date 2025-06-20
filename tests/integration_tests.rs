@@ -204,6 +204,38 @@ fn test_ipv6_split_formatting() {
 }
 
 #[test]
+fn test_extra_subnets() {
+    // Test -n with positive number
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-n", "3", "192.168.1.0/24"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+
+    // Check for extra subnets output
+    assert!(stdout.contains("[Networks]"));
+    assert!(stdout.contains("192.168.1.0     - 192.168.1.255 (current)"));
+    assert!(stdout.contains("192.168.2.0     - 192.168.2.255"));
+    assert!(stdout.contains("192.168.3.0     - 192.168.3.255"));
+
+    // Test -n 0 to show all subnets in containing /24
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-n", "0", "192.168.10.64/26"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+
+    // Check for all /26 subnets in the /24
+    assert!(stdout.contains("[Networks]"));
+    assert!(stdout.contains("192.168.10.0    - 192.168.10.63"));
+    assert!(stdout.contains("192.168.10.64   - 192.168.10.127 (current)"));
+    assert!(stdout.contains("192.168.10.128  - 192.168.10.191"));
+    assert!(stdout.contains("192.168.10.192  - 192.168.10.255"));
+}
+
+#[test]
 fn test_stdin_input() {
     use std::io::Write;
     use std::process::Stdio;
