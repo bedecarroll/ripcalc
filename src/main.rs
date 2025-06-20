@@ -452,7 +452,12 @@ mod tests {
         let config = Config::default();
         let result = process_input("invalid_input", 0, &config);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Unable to parse 'invalid_input'"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unable to parse 'invalid_input'")
+        );
     }
 
     #[test]
@@ -461,7 +466,12 @@ mod tests {
         config.explicit_ipv4.push("invalid_ipv4".to_string());
         let result = process_input("invalid_ipv4", 0, &config);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Unable to parse 'invalid_ipv4' as IPv4"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unable to parse 'invalid_ipv4' as IPv4")
+        );
     }
 
     #[test]
@@ -470,16 +480,28 @@ mod tests {
         config.explicit_ipv6.push("invalid_ipv6".to_string());
         let result = process_input("invalid_ipv6", 0, &config);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Unable to parse 'invalid_ipv6' as IPv6"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unable to parse 'invalid_ipv6' as IPv6")
+        );
     }
 
     #[test]
     fn test_process_input_explicit_interface_invalid_returns_error() {
         let mut config = Config::default();
-        config.explicit_interfaces.push("nonexistent_interface".to_string());
+        config
+            .explicit_interfaces
+            .push("nonexistent_interface".to_string());
         let result = process_input("nonexistent_interface", 0, &config);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Unable to find interface 'nonexistent_interface'"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unable to find interface 'nonexistent_interface'")
+        );
     }
 
     #[test]
