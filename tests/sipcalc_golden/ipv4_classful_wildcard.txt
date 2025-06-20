@@ -1,0 +1,18 @@
+-[ipv4 : 0.0.0.255] - 0
+
+[Classful]
+Host address		- 0.0.0.255
+Host address (decimal)	- 255
+Host address (hex)	- FF
+Network address		- 0.0.0.0
+Network class		- A
+Network mask		- 255.0.0.0
+Network mask (hex)	- FF000000
+Broadcast address	- 0.255.255.255
+
+[WILDCARD]
+Wildcard		- 0.0.0.255
+Network mask		- 255.255.255.0
+Network mask (bits)	- 24
+
+-

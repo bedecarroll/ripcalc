@@ -70,6 +70,20 @@ fn transform_sipcalc_to_ripcalc(s: &str) -> String {
     result = result.replace("Link-Local Unicast Addresses", "Link-Local Unicast Address"); // fe80::/10 addresses
     result = result.replace("Multicast Addresses", "Multicast Address"); // ff00::/8 addresses
 
+    // == IPv6 Address Type Modern Classifications ==
+    // ripcalc provides more specific RFC-based classifications
+    if result.contains("fc00:") {
+        // RFC 4193: fc00::/7 is for Unique Local IPv6 Unicast Addresses
+        result = result.replace("Unassigned", "Unique Local Unicast Address");
+    }
+    if result.contains("2001:4860:") {
+        // Handle specific global unicast ranges with known regional assignments
+        result = result.replace(
+            "Aggregatable Global Unicast Addresses",
+            "Global Unicast Address (ARIN - North America)",
+        );
+    }
+
     // == IPv4-embedded IPv6 Address Classification ==
     // sipcalc uses general "Reserved" classification; ripcalc provides specific descriptions
     result = result.replace("Reserved", "IPv4-mapped IPv6 address"); // ::ffff:0:0/96 addresses
@@ -129,10 +143,8 @@ fn ripcalc_exe() -> PathBuf {
     path
 }
 
-const fn get_test_cases() -> &'static [(&'static str, &'static [&'static str], Option<&'static str>)]
-{
-    // Define test cases: (golden file stem, cli arguments, known_issue_reason)
-    // known_issue_reason: None = should pass, Some(reason) = documents why it fails
+const fn get_ipv4_test_cases()
+-> &'static [(&'static str, &'static [&'static str], Option<&'static str>)] {
     &[
         // IPv4 Basic Tests
         ("ipv4_cidr", &["192.168.1.0/24"], None),
@@ -151,17 +163,83 @@ const fn get_test_cases() -> &'static [(&'static str, &'static [&'static str], O
         ("ipv4_split", &["-s", "26", "192.168.1.0/24"], None),
         ("ipv4_extra", &["-n", "3", "192.168.1.0/24"], None),
         ("ipv4_extra_n1", &["-n", "1", "192.168.1.0/24"], None),
-        ("ipv4_extra_n0_subnet24", &["-n", "0", "192.168.1.0/24"], None),
-        ("ipv4_extra_n0_subnet26", &["-n", "0", "192.168.10.64/26"], None),
-        ("ipv4_extra_n0_subnet28", &["-n", "0", "192.168.1.64/28"], None),
-        ("ipv4_extra_n0_subnet32", &["-n", "0", "192.168.1.0/32"], None),
-        ("ipv4_extra_n0_subnet25", &["-n", "0", "10.0.1.128/25"], None),
+        (
+            "ipv4_extra_n0_subnet24",
+            &["-n", "0", "192.168.1.0/24"],
+            None,
+        ),
+        (
+            "ipv4_extra_n0_subnet26",
+            &["-n", "0", "192.168.10.64/26"],
+            None,
+        ),
+        (
+            "ipv4_extra_n0_subnet28",
+            &["-n", "0", "192.168.1.64/28"],
+            None,
+        ),
+        (
+            "ipv4_extra_n0_subnet32",
+            &["-n", "0", "192.168.1.0/32"],
+            None,
+        ),
+        (
+            "ipv4_extra_n0_subnet25",
+            &["-n", "0", "10.0.1.128/25"],
+            None,
+        ),
         ("ipv4_extra_n5_large", &["-n", "5", "10.0.0.0/16"], None),
         ("ipv4_extra_n2_class_b", &["-n", "2", "172.16.0.0/12"], None),
         ("ipv4_classful", &["-c", "192.168.1.0/24"], None),
         ("ipv4_cidr_bitmap", &["-b", "192.168.1.0/24"], None),
         ("ipv4_classful_bitmap", &["-x", "192.168.1.0/24"], None),
         ("ipv4_wildcard", &["-w", "192.168.1.0/24"], None),
+        ("ipv4_wildcard_input", &["-w", "0.0.0.255"], None),
+    ]
+}
+
+const fn get_ipv4_flag_combination_tests()
+-> &'static [(&'static str, &'static [&'static str], Option<&'static str>)] {
+    &[
+        // IPv4 Flag Combinations
+        (
+            "ipv4_multiple_flags",
+            &["-b", "-c", "-x", "192.168.1.0/24"],
+            None,
+        ),
+        (
+            "ipv4_bitmap_classful",
+            &["-b", "-c", "192.168.1.0/24"],
+            None,
+        ),
+        ("ipv4_bitmap_wildcard", &["-b", "-w", "0.0.0.255"], None),
+        ("ipv4_classful_wildcard", &["-c", "-w", "0.0.0.255"], None),
+        ("ipv4_all_bitmaps", &["-b", "-x", "192.168.1.0/24"], None),
+        // IPv4 Operations with Flags
+        (
+            "ipv4_split_with_extra",
+            &["-s", "26", "-n", "2", "192.168.1.0/24"],
+            None,
+        ),
+        (
+            "ipv4_split_with_classful",
+            &["-s", "26", "-c", "192.168.1.0/24"],
+            None,
+        ),
+        (
+            "ipv4_extra_with_bitmap",
+            &["-n", "2", "-b", "192.168.1.0/24"],
+            None,
+        ),
+        // IPv4 Default Information Display Test
+        ("ipv4_default_cidr", &["-i", "192.168.1.0/24"], None),
+        // IPv4 Explicit Type Flags
+        (
+            "ipv4_explicit_type",
+            &["-4", "192.168.1.5 255.255.255.0"],
+            None,
+        ),
+        ("ipv4_explicit_hex", &["-4", "10.0.0.1 0xFFFF0000"], None),
         (
             "ipv4_verbose_split",
             &["-u", "-s", "27", "192.168.1.0/24"],
@@ -172,6 +250,12 @@ const fn get_test_cases() -> &'static [(&'static str, &'static [&'static str], O
             &["192.168.1.0/24", "10.0.0.0/16"],
             None,
         ),
+    ]
+}
+
+const fn get_error_test_cases()
+-> &'static [(&'static str, &'static [&'static str], Option<&'static str>)] {
+    &[
         (
             "ipv4_invalid_octets",
             &["999.999.999.999"],
@@ -187,22 +271,6 @@ const fn get_test_cases() -> &'static [(&'static str, &'static [&'static str], O
             &["not.an.ip.address"],
             Some("ripcalc exits with error vs sipcalc produces partial output"),
         ),
-        // IPv6 Basic Tests
-        ("ipv6_bare_address", &["2001:db8::1"], None),
-        ("ipv6_cidr", &["2001:db8::/48"], None),
-        ("ipv6_single_host", &["2001:db8::1/128"], None),
-        ("ipv6_large_prefix", &["2001::/16"], None),
-        ("ipv6_link_local", &["fe80::/64"], None),
-        ("ipv6_multicast", &["ff02::1/128"], None),
-        ("ipv6_6to4", &["2002::/16"], None),
-        // IPv6 Operations
-        ("ipv6_reverse", &["-r", "2001:db8::/48"], None),
-        ("ipv6_v4inv6", &["-e", "::ffff:192.0.2.1"], None),
-        ("ipv6_split", &["-S", "64", "2001:db8::/48"], None),
-        // IPv6 Special Cases
-        ("ipv6_ipv4_mapped", &["::ffff:192.0.2.1"], None),
-        ("ipv6_ipv4_compatible", &["::192.0.2.1/128"], None),
-        ("ipv6_loopback", &["::1/128"], None),
         (
             "ipv6_invalid_hex",
             &["2001:db8::gggg"],
@@ -216,12 +284,96 @@ const fn get_test_cases() -> &'static [(&'static str, &'static [&'static str], O
     ]
 }
 
+const fn get_ipv6_test_cases()
+-> &'static [(&'static str, &'static [&'static str], Option<&'static str>)] {
+    &[
+        // IPv6 Basic Tests
+        ("ipv6_bare_address", &["2001:db8::1"], None),
+        ("ipv6_cidr", &["2001:db8::/48"], None),
+        ("ipv6_single_host", &["2001:db8::1/128"], None),
+        ("ipv6_large_prefix", &["2001::/16"], None),
+        ("ipv6_link_local", &["fe80::/64"], None),
+        ("ipv6_multicast", &["ff02::1/128"], None),
+        ("ipv6_6to4", &["2002::/16"], None),
+        // IPv6 Operations
+        ("ipv6_reverse", &["-r", "2001:db8::/48"], None),
+        ("ipv6_v4inv6", &["-e", "::ffff:192.0.2.1"], None),
+        ("ipv6_split", &["-S", "64", "2001:db8::/48"], None),
+        ("ipv6_standard", &["-t", "2001:db8::/48"], None),
+        // IPv6 Flag Combinations
+        ("ipv6_multiple_flags", &["-r", "-t", "2001:db8::1"], None),
+        (
+            "ipv6_v4inv6_standard",
+            &["-e", "-t", "::ffff:192.0.2.1"],
+            None,
+        ),
+        ("ipv6_all_flags", &["-e", "-r", "-t", "2001:db8::1"], None),
+        (
+            "ipv6_split_with_reverse",
+            &["-S", "65", "-r", "fdbb::1/64"],
+            None,
+        ),
+        ("ipv6_all_info", &["-a", "2001:db8::/48"], None),
+        // IPv6 Special Cases
+        ("ipv6_ipv4_mapped", &["::ffff:192.0.2.1"], None),
+        ("ipv6_ipv4_compatible", &["::192.0.2.1/128"], None),
+        ("ipv6_loopback", &["::1/128"], None),
+        // IPv6 Explicit Type Flags
+        ("ipv6_explicit_type", &["-6", "2001:db8::1/64"], None),
+        ("ipv6_explicit_compressed", &["-6", "::1"], None),
+    ]
+}
+
+const fn get_misc_test_cases()
+-> &'static [(&'static str, &'static [&'static str], Option<&'static str>)] {
+    &[
+        // Complex Flag Combinations
+        (
+            "ipv4_all_options",
+            &["-a", "-u", "-s", "28", "-n", "1", "192.168.1.0/24"],
+            None,
+        ),
+        (
+            "ipv6_complex_combination",
+            &["-a", "-S", "64", "2001:db8::/48"],
+            None,
+        ),
+        // Border Cases
+        ("ipv4_class_a_private", &["10.0.0.1/8"], None),
+        ("ipv4_class_b_private", &["172.16.1.1/16"], None),
+        ("ipv4_class_c_private", &["192.168.1.1/24"], None),
+        (
+            "ipv4_broadcast_network",
+            &["255.255.255.255/32"],
+            Some("ripcalc doesn't show invalid usable range for single host"),
+        ),
+        (
+            "ipv4_zero_network",
+            &["0.0.0.0/0"],
+            Some("ripcalc calculates 2^32 vs sipcalc 2^32-1 addresses"),
+        ),
+        // IPv6 Address Type Coverage
+        ("ipv6_documentation_range", &["2001:db8:1234::/48"], None),
+        ("ipv6_teredo", &["2001::/32"], None),
+        ("ipv6_unique_local", &["fc00::/7"], None),
+        ("ipv6_global_unicast", &["2001:4860::/32"], None),
+    ]
+}
+
 #[test]
 fn compare_with_golden_outputs() {
     let exe = ripcalc_exe();
     assert!(exe.exists(), "ripcalc binary not found at {exe:?}");
 
-    let cases = get_test_cases();
+    // Combine all test case categories
+    let mut all_cases = Vec::new();
+    all_cases.extend_from_slice(get_ipv4_test_cases());
+    all_cases.extend_from_slice(get_ipv4_flag_combination_tests());
+    all_cases.extend_from_slice(get_ipv6_test_cases());
+    all_cases.extend_from_slice(get_misc_test_cases());
+    all_cases.extend_from_slice(get_error_test_cases());
+
+    let cases = &all_cases;
     let mut passing_tests = Vec::new();
     let mut failing_tests = Vec::new();
     let mut documented_failures = Vec::new();

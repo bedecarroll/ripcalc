@@ -1,0 +1,17 @@
+-[ipv4 : 255.255.255.255/32] - 0
+
+[CIDR]
+Host address		- 255.255.255.255
+Host address (decimal)	- 4294967295
+Host address (hex)	- FFFFFFFF
+Network address		- 255.255.255.255
+Network mask		- 255.255.255.255
+Network mask (bits)	- 32
+Network mask (hex)	- FFFFFFFF
+Broadcast address	- 255.255.255.255
+Cisco wildcard		- 0.0.0.0
+Addresses in network	- 1
+Network range		- 255.255.255.255 - 255.255.255.255
+Usable range		- 0.0.0.0 - 255.255.255.254
+
+-
