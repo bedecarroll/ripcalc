@@ -1,0 +1,17 @@
+-[ipv4 : 10.0.0.1/8] - 0
+
+[CIDR]
+Host address		- 10.0.0.1
+Host address (decimal)	- 167772161
+Host address (hex)	- A000001
+Network address		- 10.0.0.0
+Network mask		- 255.0.0.0
+Network mask (bits)	- 8
+Network mask (hex)	- FF000000
+Broadcast address	- 10.255.255.255
+Cisco wildcard		- 0.255.255.255
+Addresses in network	- 16777216
+Network range		- 10.0.0.0 - 10.255.255.255
+Usable range		- 10.0.0.1 - 10.255.255.254
+
+-
