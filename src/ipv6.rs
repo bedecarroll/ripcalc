@@ -54,6 +54,7 @@ pub struct IPv6Calculator {
     pub network: Ipv6Addr,
     pub prefix_mask: Ipv6Addr,
     pub address_type: IPv6AddressType,
+    pub is_bare_address: bool, // True if input was just an IPv6 address without CIDR notation
 }
 
 #[derive(Debug, Clone)]
@@ -100,7 +101,7 @@ pub enum GlobalRegion {
 
 impl IPv6Calculator {
     pub fn new(input: &str) -> Result<Self> {
-        let (address, prefix_length) = Self::parse_input(input)?;
+        let (address, prefix_length, is_bare_address) = Self::parse_input(input)?;
 
         let network = Self::calculate_network(address, prefix_length);
         let prefix_mask = Self::prefix_to_mask(prefix_length);
@@ -112,10 +113,11 @@ impl IPv6Calculator {
             network,
             prefix_mask,
             address_type,
+            is_bare_address,
         })
     }
 
-    fn parse_input(input: &str) -> Result<(Ipv6Addr, u8)> {
+    fn parse_input(input: &str) -> Result<(Ipv6Addr, u8, bool)> {
         if input.contains('/') {
             let parts: Vec<&str> = input.split('/').collect();
             if parts.len() != 2 {
@@ -129,11 +131,11 @@ impl IPv6Calculator {
                 return Err(anyhow!("Invalid IPv6 prefix length"));
             }
 
-            Ok((address, prefix_length))
+            Ok((address, prefix_length, false))
         } else {
-            // Just an IPv6 address, assume /128
+            // Just an IPv6 address, assume /128 but mark as bare address
             let address = Ipv6Addr::from_str(input)?;
-            Ok((address, 128))
+            Ok((address, 128, true))
         }
     }
 
@@ -261,11 +263,27 @@ impl IPv6Calculator {
             // APNIC allocations
             0x2001 => match segments[1] {
                 // APNIC allocations - combined for clippy compliance
-                0x0200..=0x03ff | 0x0c00..=0x0dff | 0x0e00..=0x0fff | 0x4400..=0x45ff | 0x8000..=0x9fff | 0xa000..=0xafff | 0xb000..=0xbfff => GlobalRegion::Apnic,
+                0x0200..=0x03ff
+                | 0x0c00..=0x0dff
+                | 0x0e00..=0x0fff
+                | 0x4400..=0x45ff
+                | 0x8000..=0x9fff
+                | 0xa000..=0xafff
+                | 0xb000..=0xbfff => GlobalRegion::Apnic,
                 // ARIN allocations - combined for clippy compliance
                 0x0400..=0x05ff | 0x1800..=0x19ff | 0x4800..=0x49ff => GlobalRegion::Arin,
                 // RIPE allocations - combined for clippy compliance
-                0x0600..=0x07ff | 0x0800..=0x0bff | 0x1400..=0x17ff | 0x1a00..=0x1bff | 0x1c00..=0x1fff | 0x2000..=0x3fff | 0x4000..=0x41ff | 0x4600..=0x47ff | 0x4a00..=0x4bff | 0x4c00..=0x4dff | 0x5000..=0x5fff => GlobalRegion::Ripe,
+                0x0600..=0x07ff
+                | 0x0800..=0x0bff
+                | 0x1400..=0x17ff
+                | 0x1a00..=0x1bff
+                | 0x1c00..=0x1fff
+                | 0x2000..=0x3fff
+                | 0x4000..=0x41ff
+                | 0x4600..=0x47ff
+                | 0x4a00..=0x4bff
+                | 0x4c00..=0x4dff
+                | 0x5000..=0x5fff => GlobalRegion::Ripe,
                 // LACNIC allocations
                 0x1200..=0x13ff => GlobalRegion::Lacnic, // 2001:1200::/23
                 // AFRINIC allocations
@@ -277,7 +295,9 @@ impl IPv6Calculator {
             // APNIC major allocations - use range pattern for clippy compliance
             0x2400..=0x241f => GlobalRegion::Apnic,
             // ARIN major allocations - combined for clippy compliance
-            0x2600..=0x260f | 0x2610..=0x2611 | 0x2620..=0x2621 | 0x2630..=0x263f => GlobalRegion::Arin,
+            0x2600..=0x260f | 0x2610..=0x2611 | 0x2620..=0x2621 | 0x2630..=0x263f => {
+                GlobalRegion::Arin
+            }
             // LACNIC major allocations
             0x2800..=0x280f => GlobalRegion::Lacnic, // 2800::/12
             // AFRINIC major allocations
@@ -929,7 +949,8 @@ mod tests {
                 );
             } else {
                 panic!(
-                    "Address {addr_str} should be classified as Global Unicast, got {:?}", calc.address_type
+                    "Address {addr_str} should be classified as Global Unicast, got {:?}",
+                    calc.address_type
                 );
             }
         }
