@@ -1,0 +1,17 @@
+-[ipv4 : 192.168.1.1/0] - 0
+
+[CIDR]
+Host address		- 192.168.1.1
+Host address (decimal)	- 3232235777
+Host address (hex)	- C0A80101
+Network address		- 0.0.0.0
+Network mask		- 0.0.0.0
+Network mask (bits)	- 0
+Network mask (hex)	- 0
+Broadcast address	- 255.255.255.255
+Cisco wildcard		- 255.255.255.255
+Addresses in network	- 4294967295
+Network range		- 0.0.0.0 - 255.255.255.255
+Usable range		- 0.0.0.1 - 255.255.255.254
+
+-

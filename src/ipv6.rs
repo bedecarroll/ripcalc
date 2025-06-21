@@ -535,7 +535,10 @@ impl IPv6Calculator {
             // Find the best compression spot and format accordingly
             let compressed_addr = self.get_compressed_address();
             // Replace the last segment group with IPv4 notation
-            compressed_addr.rfind(':').map_or_else(|| format!("{compressed_addr}:"), |last_colon| compressed_addr[..=last_colon].to_string())
+            compressed_addr.rfind(':').map_or_else(
+                || format!("{compressed_addr}:"),
+                |last_colon| compressed_addr[..=last_colon].to_string(),
+            )
         };
 
         let compressed = format!("{compressed_prefix}{ipv4_part}");

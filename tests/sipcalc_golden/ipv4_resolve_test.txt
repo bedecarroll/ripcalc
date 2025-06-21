@@ -1,0 +1,17 @@
+-[ipv4 : 127.0.0.1/8] - 0
+
+[CIDR]
+Host address		- 127.0.0.1
+Host address (decimal)	- 2130706433
+Host address (hex)	- 7F000001
+Network address		- 127.0.0.0
+Network mask		- 255.0.0.0
+Network mask (bits)	- 8
+Network mask (hex)	- FF000000
+Broadcast address	- 127.255.255.255
+Cisco wildcard		- 0.255.255.255
+Addresses in network	- 16777216
+Network range		- 127.0.0.0 - 127.255.255.255
+Usable range		- 127.0.0.1 - 127.255.255.254
+
+-
