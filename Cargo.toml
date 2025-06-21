@@ -4,17 +4,29 @@ version = "0.1.0"
 edition = "2024"
 description = "A Rust-based subnet calculator that replicates and extends sipcalc functionality"
 license = "MIT"
+authors = ["Bede Carroll"]
+repository = "https://github.com/bedecarroll/ripcalc"
+homepage = "https://github.com/bedecarroll/ripcalc"
+documentation = "https://ripcalc.bedecarroll.com"
+readme = "README.md"
+keywords = ["networking", "subnet", "calculator", "ipv4", "ipv6"]
+categories = ["command-line-utilities", "network-programming"]
 
 [[bin]]
 name = "ripcalc"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "4", features = ["derive"] }
 ipnetwork = "0.21"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 get_if_addrs = "0.5"
-anyhow = "1.0"
-dns-lookup = "2.0"
+anyhow = "1"
+dns-lookup = "2"
 bitflags = "2"
+
+[build-dependencies]
+clap = { version = "4", features = ["derive"] }
+clap_mangen = "0.2"
+clap_complete = "4"
