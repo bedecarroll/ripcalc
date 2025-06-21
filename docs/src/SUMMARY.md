@@ -6,4 +6,5 @@
 - [ripcalc vs sipcalc](comparison.md)
 - [Modules](modules.md)
 - [Development Workflow](development.md)
+- [Packaging](packaging.md)
 - [License](license.md)

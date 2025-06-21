@@ -49,11 +49,30 @@ The table below summarizes feature parity between **ripcalc** and the original *
 
 ## Installation
 
+### From Source
 ```bash
+git clone https://github.com/bedecarroll/ripcalc.git
+cd ripcalc
 cargo build --release
 ```
 
 The binary will be available at `target/release/ripcalc`.
+
+### Optional Enhancements
+```bash
+# Install manpage system-wide
+./scripts/install-manpage.sh
+
+# Install shell completions (bash, zsh, fish)
+./scripts/install-completions.sh
+```
+
+### Package Managers
+```bash
+# Coming soon
+cargo install ripcalc          # crates.io
+brew install ripcalc          # Homebrew
+```
 
 ## Usage
 
@@ -255,7 +274,7 @@ This project maintains **highest quality standards** with comprehensive linting 
 
 ```bash
 # Clone and build
-git clone <repo-url>
+git clone https://github.com/bedecarroll/ripcalc.git
 cd ripcalc
 cargo build
 

@@ -14,7 +14,7 @@ cargo install ripcalc
 
 ### Build from Source (Current Method)
 ```bash
-git clone <repository-url>
+git clone https://github.com/bedecarroll/ripcalc.git
 cd ripcalc
 cargo build --release
 ```
@@ -25,6 +25,30 @@ The binary will be available at `target/release/ripcalc`.
 ```bash
 ./target/release/ripcalc --version
 ```
+
+### Install Manpage (Optional)
+```bash
+# After building, install the manpage system-wide
+./scripts/install-manpage.sh
+
+# Or to a custom directory
+./scripts/install-manpage.sh ~/.local/share/man/man1
+```
+
+### Install Shell Completions (Optional)
+```bash
+# Install completions for all supported shells (bash, zsh, fish)
+./scripts/install-completions.sh
+
+# Custom installation directories
+BASH_COMP_DIR=~/.local/share/bash-completion/completions ./scripts/install-completions.sh
+```
+
+Supported shells:
+- **Bash**: Tab completion for all flags and options
+- **Zsh**: Advanced completion with descriptions
+- **Fish**: Interactive completion with help text
+- **PowerShell**: Windows support (completion file generated but install script focuses on Unix shells)
 
 ## Future Installation Methods
 

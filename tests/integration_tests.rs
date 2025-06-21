@@ -123,7 +123,7 @@ fn test_help_output() {
 
     // Check for help content
     assert!(
-        stdout.contains("A subnet calculator that replicates and extends sipcalc functionality")
+        stdout.contains("ripcalc is a Rust-based subnet calculator that builds upon the excellent foundation of sipcalc")
     );
     assert!(stdout.contains("--json"));
     assert!(stdout.contains("--split"));
