@@ -195,6 +195,19 @@ const fn get_ipv4_test_cases()
         ("ipv4_classful_bitmap", &["-x", "192.168.1.0/24"], None),
         ("ipv4_wildcard", &["-w", "192.168.1.0/24"], None),
         ("ipv4_wildcard_input", &["-w", "0.0.0.255"], None),
+        // Hex mask without 0x prefix
+        ("ipv4_hex_no_prefix", &["-4", "10.0.0.1 FFFF0000"], None),
+        // Boundary value tests
+        (
+            "ipv4_boundary_all",
+            &["-4", "192.168.1.1/0"],
+            Some("ripcalc calculates 2^32 vs sipcalc 2^32-1 addresses"),
+        ),
+        ("ipv4_boundary_single", &["-4", "192.168.1.1/32"], None),
+        ("ipv6_boundary_all", &["-6", "2001:db8::1/0"], None),
+        ("ipv6_boundary_single", &["-6", "2001:db8::1/128"], None),
+        // DNS resolution test (basic flag recognition)
+        ("ipv4_resolve_test", &["-d", "127.0.0.1/8"], None),
     ]
 }
 

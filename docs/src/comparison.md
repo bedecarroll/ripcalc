@@ -130,7 +130,37 @@ ripcalc 192.168.1.0/24 10.0.0.0/16 172.16.0.0/12
 
 **ripcalc enhancement**: Builds on sipcalc's multiple input support with enhanced index clarity for easier result identification.
 
-### 4. Extended Capabilities
+### 4. Address Calculation Differences
+
+#### Network Address Count for /0 Networks
+
+```bash
+# Command with entire IPv4 space
+ripcalc 192.168.1.1/0
+```
+
+| Tool | Address Count | Assessment |
+|------|---------------|------------|
+| **sipcalc** | `4294967295` (2^32 - 1) | Traditional calculation excluding network/broadcast |
+| **ripcalc** | `4294967296` (2^32) | Modern calculation including all addresses |
+
+**ripcalc enhancement**: Provides mathematically correct 2^32 calculation for the complete IPv4 address space, rather than applying network/broadcast exclusions inappropriately to /0 networks.
+
+#### Single Host Networks
+
+```bash
+# Command with single host
+ripcalc 255.255.255.255/32
+```
+
+| Tool | Usable Range | Assessment |
+|------|--------------|------------|
+| **sipcalc** | Shows usable range calculations | May show invalid ranges for single hosts |
+| **ripcalc** | Accurate single host handling | Doesn't show invalid usable ranges |
+
+**ripcalc enhancement**: Correctly handles edge cases where traditional network calculations don't apply, providing more accurate information for single-host networks.
+
+### 5. Extended Capabilities
 
 #### JSON Output Support
 
