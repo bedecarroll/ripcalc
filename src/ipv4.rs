@@ -106,6 +106,10 @@ impl IPv4Calculator {
                 // Dotted decimal netmask
                 let netmask = Ipv4Addr::from_str(netmask_str)?;
                 Self::netmask_to_prefix(netmask)
+            } else if netmask_str.len() == 8 && netmask_str.chars().all(|c| c.is_ascii_hexdigit()) {
+                // Hex netmask without 0x prefix (8 hex digits)
+                let hex_val = u32::from_str_radix(netmask_str, 16)?;
+                Self::netmask_to_prefix(Ipv4Addr::from(hex_val))
             } else {
                 // Assume it's a prefix length
                 netmask_str.parse()?
@@ -173,7 +177,10 @@ impl IPv4Calculator {
         }
     }
 
-    const fn get_prefix_for_bare_address(address: Ipv4Addr, ipv4_flags: Option<crate::IPv4Flags>) -> u8 {
+    const fn get_prefix_for_bare_address(
+        address: Ipv4Addr,
+        ipv4_flags: Option<crate::IPv4Flags>,
+    ) -> u8 {
         // Determine if we should use /32 (sipcalc-compatible) or classful behavior
         if let Some(flags) = ipv4_flags {
             // When CLASSFUL_ADDR flag is present, always use classful prefixes (highest priority)

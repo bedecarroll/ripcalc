@@ -160,9 +160,11 @@ fn test_comprehensive_error_handling() {
             .output()
             .expect("Failed to execute ripcalc");
 
-        // Note: ripcalc currently doesn't set proper exit codes, so we only check for error messages
-        // TODO: Fix ripcalc to return non-zero exit codes on errors
-        // assert!(!output.status.success(), "Should fail for {description}: {input}");
+        // Ripcalc should return non-zero exit codes on errors
+        assert!(
+            !output.status.success(),
+            "Should fail for {description}: {input}"
+        );
 
         let stderr = str::from_utf8(&output.stderr).unwrap();
         // Should produce some error message
@@ -262,6 +264,14 @@ fn test_stdin_input() {
 }
 
 // ===== COMPREHENSIVE FLAG TESTING =====
+
+// All sipcalc compatibility features have been implemented:
+// ✓ DNS resolution flag (-d/--resolve)
+// ✓ Long format flags (--all, --help, --version, etc.)
+// ✓ Hex mask without 0x prefix (NNNNNNNN format)
+// ✓ Boundary values (/0, /32 for IPv4; /0, /128 for IPv6)
+// ✓ Exit code handling for errors
+// ✓ Comprehensive flag combination testing
 
 #[test]
 fn test_cidr_bitmap_flag() {
@@ -577,6 +587,126 @@ fn test_comprehensive_flag_coverage() {
         assert!(
             stdout.contains(&format!(" {flag}")) || stdout.contains(&format!("{flag},")),
             "Flag {flag} not found in help output"
+        );
+    }
+}
+
+// ===== MISSING SIPCALC FEATURE TESTS =====
+
+#[test]
+fn test_resolve_flag() {
+    // Test -d/--resolve flag for name resolution
+    // This feature enables DNS lookups for IP addresses
+    // NOTE: Using localhost/127.0.0.1 to avoid CI environment DNS differences
+    // In production, this should use mocking for deterministic testing
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-d", "127.0.0.1/8"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    // Should work even if DNS resolution fails, just test the flag is recognized
+    // Note: Consider implementing proper mocking for DNS resolution testing in future
+    assert!(output.status.success());
+    assert!(stdout.contains("127.0.0.1"));
+}
+
+#[test]
+fn test_long_format_flags() {
+    // Test long format equivalents of short flags
+    let test_cases = vec![
+        (vec!["--all", "192.168.1.0/24"], "[CIDR]"),
+        (vec!["--help"], "subnet calculator"),
+        (vec!["--version"], "ripcalc"),
+        (vec!["--cidr-bitmap", "192.168.1.0/24"], "[CIDR bitmaps]"),
+        (vec!["--classful-addr", "192.168.1.0/24"], "[Classful]"),
+        (vec!["--wildcard", "0.0.0.255"], "[WILDCARD]"),
+    ];
+
+    for (args, expected) in test_cases {
+        let output = Command::new("./target/debug/ripcalc")
+            .args(&args)
+            .output()
+            .unwrap_or_else(|_| panic!("Failed to execute ripcalc with args: {args:?}"));
+
+        let stdout = str::from_utf8(&output.stdout).unwrap();
+        assert!(
+            stdout.contains(expected),
+            "Expected '{expected}' in output for args {args:?}"
+        );
+    }
+}
+
+#[test]
+fn test_hex_mask_without_prefix() {
+    // Test hex mask in nnnnnnnn format (without 0x prefix)
+    let output = Command::new("./target/debug/ripcalc")
+        .args(["-4", "10.0.0.1 FFFF0000"])
+        .output()
+        .expect("Failed to execute ripcalc");
+
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    assert!(stdout.contains("10.0.0.1"));
+    assert!(stdout.contains("Network address\t\t- 10.0.0.0"));
+}
+
+#[test]
+fn test_boundary_values() {
+    // Test boundary prefix lengths
+    let test_cases = vec![
+        ("-4", "192.168.1.1/0", "entire IPv4 space"),
+        ("-4", "192.168.1.1/32", "single host"),
+        ("-6", "2001:db8::1/0", "entire IPv6 space"),
+        ("-6", "2001:db8::1/128", "single IPv6 host"),
+    ];
+
+    for (flag, input, description) in test_cases {
+        let output = Command::new("./target/debug/ripcalc")
+            .args([flag, input])
+            .output()
+            .unwrap_or_else(|_| panic!("Failed to execute ripcalc for {description}"));
+
+        assert!(output.status.success(), "Failed for {description}: {input}");
+        let stdout = str::from_utf8(&output.stdout).unwrap();
+        assert!(
+            !stdout.is_empty(),
+            "Empty output for {description}: {input}"
+        );
+    }
+}
+
+#[test]
+fn test_comprehensive_flag_combinations() {
+    // Test comprehensive flag combinations for maximum coverage
+    let test_cases = vec![
+        (vec!["-a", "-d", "192.168.1.0/24"], "all info with resolve"),
+        (
+            vec!["-b", "-c", "-x", "-u", "192.168.1.0/24"],
+            "all bitmap flags with verbose",
+        ),
+        (
+            vec!["-s", "26", "-n", "2", "-u", "192.168.1.0/24"],
+            "split with subnets and verbose",
+        ),
+        (vec!["-4", "-6", "192.168.1.0/24"], "conflicting type flags"),
+        (
+            vec!["-t", "-r", "-e", "2001:db8::1/64"],
+            "all IPv6 info flags",
+        ),
+    ];
+
+    for (args, description) in test_cases {
+        let output = Command::new("./target/debug/ripcalc")
+            .args(&args)
+            .output()
+            .unwrap_or_else(|_| panic!("Failed to execute ripcalc for {description}"));
+
+        // Should not crash, even with conflicting flags
+        let _stdout = str::from_utf8(&output.stdout).unwrap();
+        let stderr = str::from_utf8(&output.stderr).unwrap();
+        assert!(
+            output.status.success() || !stderr.is_empty(),
+            "Unexpected failure for {description}: {args:?}"
         );
     }
 }
