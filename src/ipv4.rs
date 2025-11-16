@@ -126,7 +126,7 @@ impl IPv4Calculator {
 
     fn prefix_to_netmask(prefix_length: u8) -> Ipv4Addr {
         if prefix_length == 0 {
-            return Ipv4Addr::new(0, 0, 0, 0);
+            return Ipv4Addr::UNSPECIFIED;
         }
 
         let mask = (!0u32) << (32 - prefix_length);
@@ -532,8 +532,8 @@ mod tests {
     fn test_ipv4_edge_cases() {
         // Test /0 network
         let calc = IPv4Calculator::new("0.0.0.0/0").unwrap();
-        assert_eq!(calc.network, Ipv4Addr::new(0, 0, 0, 0));
-        assert_eq!(calc.broadcast, Ipv4Addr::new(255, 255, 255, 255));
+        assert_eq!(calc.network, Ipv4Addr::UNSPECIFIED);
+        assert_eq!(calc.broadcast, Ipv4Addr::BROADCAST);
         assert_eq!(calc.get_host_count(), 4_294_967_296);
 
         // Test /30 network (common for point-to-point)

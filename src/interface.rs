@@ -33,14 +33,11 @@ pub fn get_interface_info(interface_name: &str) -> Result<InterfaceInfo> {
     }
 
     if !found {
-        return Err(anyhow!("Interface '{}' not found", interface_name));
+        return Err(anyhow!("Interface '{interface_name}' not found"));
     }
 
     if ipv4_addresses.is_empty() && ipv6_addresses.is_empty() {
-        return Err(anyhow!(
-            "No IP addresses found on interface '{}'",
-            interface_name
-        ));
+        return Err(anyhow!("No IP addresses found on interface '{interface_name}'"));
     }
 
     Ok(InterfaceInfo {
@@ -84,11 +81,11 @@ mod tests {
     #[test]
     fn test_netmask_to_prefix_v4() {
         // Test common IPv4 netmasks
-        assert_eq!(netmask_to_prefix_v4(Ipv4Addr::new(255, 255, 255, 255)), 32);
+        assert_eq!(netmask_to_prefix_v4(Ipv4Addr::BROADCAST), 32);
         assert_eq!(netmask_to_prefix_v4(Ipv4Addr::new(255, 255, 255, 0)), 24);
         assert_eq!(netmask_to_prefix_v4(Ipv4Addr::new(255, 255, 0, 0)), 16);
         assert_eq!(netmask_to_prefix_v4(Ipv4Addr::new(255, 0, 0, 0)), 8);
-        assert_eq!(netmask_to_prefix_v4(Ipv4Addr::new(0, 0, 0, 0)), 0);
+        assert_eq!(netmask_to_prefix_v4(Ipv4Addr::UNSPECIFIED), 0);
 
         // Test some less common netmasks
         assert_eq!(netmask_to_prefix_v4(Ipv4Addr::new(255, 255, 255, 128)), 25);
