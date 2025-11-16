@@ -143,7 +143,7 @@ impl IPv6Calculator {
 
     fn calculate_network(address: Ipv6Addr, prefix_length: u8) -> Ipv6Addr {
         if prefix_length == 0 {
-            return Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0);
+            return Ipv6Addr::UNSPECIFIED;
         }
 
         let addr_bytes = address.octets();
@@ -559,10 +559,7 @@ impl IPv6Calculator {
         let subnet_count = 2u128.pow(u32::from(additional_bits));
         // For very large numbers of subnets, enforce threshold to satisfy unit tests
         if subnet_count > 10000 {
-            return Err(anyhow!(
-                "Too many subnets to generate ({} subnets)",
-                subnet_count
-            ));
+            return Err(anyhow!("Too many subnets to generate ({subnet_count} subnets)"));
         }
 
         let mut subnets = Vec::new();
