@@ -368,59 +368,58 @@ impl OutputFormatter {
     }
 
     fn format_ipv4_split_section(calc: &IPv4Calculator, config: &Config) {
-        if let Some(ref split_mask) = config.split_ipv4 {
-            if let Ok(new_prefix) = Self::parse_ipv4_mask_to_prefix(split_mask) {
-                if let Ok(subnets) = calc.split_network(new_prefix) {
-                    if config.output.split_verbose {
-                        // Verbose split mode - show information for each subnet (matches sipcalc)
-                        println!("[Split network - verbose]");
-                        for subnet in &subnets {
-                            // Show header for each subnet with original network (matches sipcalc format)
-                            println!(
-                                "-[ipv4 : {}/{prefix}] - 0",
-                                calc.network,
-                                prefix = calc.prefix_length
-                            );
-                            println!();
+        if let Some(split_mask) = &config.split_ipv4
+            && let Ok(new_prefix) = Self::parse_ipv4_mask_to_prefix(split_mask)
+            && let Ok(subnets) = calc.split_network(new_prefix)
+        {
+            if config.output.split_verbose {
+                // Verbose split mode - show information for each subnet (matches sipcalc)
+                println!("[Split network - verbose]");
+                for subnet in &subnets {
+                    // Show header for each subnet with original network (matches sipcalc format)
+                    println!(
+                        "-[ipv4 : {}/{prefix}] - 0",
+                        calc.network,
+                        prefix = calc.prefix_length
+                    );
+                    println!();
 
-                            if config.output.all_info {
-                                // With -a flag: show full information for each subnet
-                                // Show classful section with hybrid info (subnet host, original classful)
-                                Self::format_ipv4_classful_section_for_split(subnet, calc);
-                                println!();
+                    if config.output.all_info {
+                        // With -a flag: show full information for each subnet
+                        // Show classful section with hybrid info (subnet host, original classful)
+                        Self::format_ipv4_classful_section_for_split(subnet, calc);
+                        println!();
 
-                                // Show CIDR section for the split subnet
-                                Self::format_ipv4_cidr_section(subnet);
-                                println!();
+                        // Show CIDR section for the split subnet
+                        Self::format_ipv4_cidr_section(subnet);
+                        println!();
 
-                                // Show classful bitmaps section using original network
-                                Self::format_ipv4_classful_bitmap_section(calc);
-                                println!();
+                        // Show classful bitmaps section using original network
+                        Self::format_ipv4_classful_bitmap_section(calc);
+                        println!();
 
-                                // Show CIDR bitmaps section for the split subnet
-                                Self::format_ipv4_cidr_bitmap_section(subnet);
-                                println!();
+                        // Show CIDR bitmaps section for the split subnet
+                        Self::format_ipv4_cidr_bitmap_section(subnet);
+                        println!();
 
-                                // Show networks section for the split subnet
-                                Self::format_ipv4_networks_section(subnet);
-                            } else {
-                                // Without -a flag: show only CIDR section for each subnet (sipcalc behavior)
-                                Self::format_ipv4_cidr_section(subnet);
-                            }
-                            println!();
-                            println!("-");
-                        }
+                        // Show networks section for the split subnet
+                        Self::format_ipv4_networks_section(subnet);
                     } else {
-                        // Normal split mode - show summary
-                        println!("[Split network]");
-                        for subnet in &subnets {
-                            // Print each subnet network and its broadcast address
-                            println!(
-                                "Network\t\t\t- {:<15} - {}",
-                                subnet.network, subnet.broadcast
-                            );
-                        }
+                        // Without -a flag: show only CIDR section for each subnet (sipcalc behavior)
+                        Self::format_ipv4_cidr_section(subnet);
                     }
+                    println!();
+                    println!("-");
+                }
+            } else {
+                // Normal split mode - show summary
+                println!("[Split network]");
+                for subnet in &subnets {
+                    // Print each subnet network and its broadcast address
+                    println!(
+                        "Network\t\t\t- {:<15} - {}",
+                        subnet.network, subnet.broadcast
+                    );
                 }
             }
         }
@@ -857,26 +856,25 @@ impl OutputFormatter {
             });
         }
 
-        if let Some(ref split_mask) = config.split_ipv4 {
-            if let Ok(new_prefix) = Self::parse_ipv4_mask_to_prefix(split_mask) {
-                if let Ok(subnets) = calc.split_network(new_prefix) {
-                    let subnet_data: Vec<Value> = subnets
-                        .iter()
-                        .map(|subnet| {
-                            json!({
-                                "network": subnet.network.to_string(),
-                                "prefix_length": subnet.prefix_length,
-                                "broadcast": subnet.broadcast.to_string(),
-                                "usable_range": {
-                                    "start": subnet.get_first_usable().to_string(),
-                                    "end": subnet.get_last_usable().to_string()
-                                }
-                            })
-                        })
-                        .collect();
-                    result["subnets"] = json!(subnet_data);
-                }
-            }
+        if let Some(split_mask) = &config.split_ipv4
+            && let Ok(new_prefix) = Self::parse_ipv4_mask_to_prefix(split_mask)
+            && let Ok(subnets) = calc.split_network(new_prefix)
+        {
+            let subnet_data: Vec<Value> = subnets
+                .iter()
+                .map(|subnet| {
+                    json!({
+                        "network": subnet.network.to_string(),
+                        "prefix_length": subnet.prefix_length,
+                        "broadcast": subnet.broadcast.to_string(),
+                        "usable_range": {
+                            "start": subnet.get_first_usable().to_string(),
+                            "end": subnet.get_last_usable().to_string()
+                        }
+                    })
+                })
+                .collect();
+            result["subnets"] = json!(subnet_data);
         }
 
         println!("{}", serde_json::to_string_pretty(&result)?);
@@ -911,28 +909,27 @@ impl OutputFormatter {
             });
         }
 
-        if let Some(ref split_prefix) = config.split_ipv6 {
-            if let Ok(new_prefix) = split_prefix.parse::<u8>() {
-                if let Ok(subnets) = calc.split_network(new_prefix) {
-                    let subnet_data: Vec<Value> = subnets
-                        .iter()
-                        .map(|subnet| {
-                            let (start, end) = subnet.get_network_range();
-                            json!({
-                                "network": subnet.network.to_string(),
-                                "prefix_length": subnet.prefix_length,
-                                "expanded_address": subnet.get_expanded_address(),
-                                "compressed_address": subnet.get_compressed_address(),
-                                "network_range": {
-                                    "start": start.to_string(),
-                                    "end": end.to_string()
-                                }
-                            })
-                        })
-                        .collect();
-                    result["subnets"] = json!(subnet_data);
-                }
-            }
+        if let Some(split_prefix) = &config.split_ipv6
+            && let Ok(new_prefix) = split_prefix.parse::<u8>()
+            && let Ok(subnets) = calc.split_network(new_prefix)
+        {
+            let subnet_data: Vec<Value> = subnets
+                .iter()
+                .map(|subnet| {
+                    let (start, end) = subnet.get_network_range();
+                    json!({
+                        "network": subnet.network.to_string(),
+                        "prefix_length": subnet.prefix_length,
+                        "expanded_address": subnet.get_expanded_address(),
+                        "compressed_address": subnet.get_compressed_address(),
+                        "network_range": {
+                            "start": start.to_string(),
+                            "end": end.to_string()
+                        }
+                    })
+                })
+                .collect();
+            result["subnets"] = json!(subnet_data);
         }
 
         println!("{}", serde_json::to_string_pretty(&result)?);
@@ -940,10 +937,10 @@ impl OutputFormatter {
     }
 
     fn parse_ipv4_mask_to_prefix(mask_str: &str) -> Result<u8> {
-        if let Ok(prefix) = mask_str.parse::<u8>() {
-            if prefix <= 32 {
-                return Ok(prefix);
-            }
+        if let Ok(prefix) = mask_str.parse::<u8>()
+            && prefix <= 32
+        {
+            return Ok(prefix);
         }
 
         if mask_str.starts_with("0x") || mask_str.starts_with("0X") {

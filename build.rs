@@ -7,9 +7,8 @@ use std::path::PathBuf;
 include!("src/cli.rs");
 
 fn main() -> Result<(), Error> {
-    let out_dir = match std::env::var_os("OUT_DIR") {
-        None => return Ok(()),
-        Some(out_dir) => out_dir,
+    let Some(out_dir) = std::env::var_os("OUT_DIR") else {
+        return Ok(());
     };
 
     let mut cmd = build_cli();

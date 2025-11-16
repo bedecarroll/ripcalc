@@ -10,9 +10,10 @@ pub struct ResolvedAddress {
 
 pub fn resolve_hostname(hostname: &str) -> Result<ResolvedAddress> {
     match lookup_host(hostname) {
-        Ok(addresses) => {
+        Ok(address_iter) => {
+            let addresses: Vec<IpAddr> = address_iter.collect();
             if addresses.is_empty() {
-                Err(anyhow!("No addresses found for hostname '{}'", hostname))
+                Err(anyhow!("No addresses found for hostname '{hostname}'"))
             } else {
                 Ok(ResolvedAddress {
                     hostname: hostname.to_string(),
@@ -20,7 +21,7 @@ pub fn resolve_hostname(hostname: &str) -> Result<ResolvedAddress> {
                 })
             }
         }
-        Err(e) => Err(anyhow!("DNS lookup failed for '{}': {}", hostname, e)),
+        Err(e) => Err(anyhow!("DNS lookup failed for '{hostname}': {e}")),
     }
 }
 
