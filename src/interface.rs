@@ -37,7 +37,9 @@ pub fn get_interface_info(interface_name: &str) -> Result<InterfaceInfo> {
     }
 
     if ipv4_addresses.is_empty() && ipv6_addresses.is_empty() {
-        return Err(anyhow!("No IP addresses found on interface '{interface_name}'"));
+        return Err(anyhow!(
+            "No IP addresses found on interface '{interface_name}'"
+        ));
     }
 
     Ok(InterfaceInfo {

@@ -559,7 +559,9 @@ impl IPv6Calculator {
         let subnet_count = 2u128.pow(u32::from(additional_bits));
         // For very large numbers of subnets, enforce threshold to satisfy unit tests
         if subnet_count > 10000 {
-            return Err(anyhow!("Too many subnets to generate ({subnet_count} subnets)"));
+            return Err(anyhow!(
+                "Too many subnets to generate ({subnet_count} subnets)"
+            ));
         }
 
         let mut subnets = Vec::new();
