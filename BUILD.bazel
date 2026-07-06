@@ -1,0 +1,37 @@
+load("@ripcalc_crates//:defs.bzl", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+
+rust_binary(
+    name = "ripcalc",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/main.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = all_crate_deps(normal = True),
+)
+
+rust_test(
+    name = "unit_tests",
+    crate = ":ripcalc",
+    edition = "2024",
+)
+
+rust_test(
+    name = "integration_tests",
+    srcs = ["tests/integration_tests.rs"],
+    data = [":ripcalc"],
+    edition = "2024",
+    env = {"RIPCALC_BIN": "$(rootpath :ripcalc)"},
+    deps = all_crate_deps(normal = True),
+)
+
+rust_test(
+    name = "golden_compare",
+    srcs = ["tests/golden_compare.rs"],
+    data = [":ripcalc"] + glob(["tests/sipcalc_golden/**"]),
+    edition = "2024",
+    env = {
+        "RIPCALC_BIN": "$(rootpath :ripcalc)",
+        "RIPCALC_MANIFEST_DIR": "ripcalc",
+    },
+)

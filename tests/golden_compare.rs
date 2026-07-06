@@ -130,8 +130,17 @@ fn transform_sipcalc_to_ripcalc(s: &str) -> String {
     result
 }
 
+/// Returns the crate directory (overridable so Bazel can point at runfiles).
+fn manifest_dir() -> String {
+    std::env::var("RIPCALC_MANIFEST_DIR")
+        .unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").to_string())
+}
+
 /// Returns the path to the ripcalc binary (assumes target/debug/ripcalc).
 fn ripcalc_exe() -> PathBuf {
+    if let Some(bin) = std::env::var_os("RIPCALC_BIN") {
+        return PathBuf::from(bin);
+    }
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("target");
     path.push("debug");
@@ -392,11 +401,7 @@ fn compare_with_golden_outputs() {
     let mut documented_failures = Vec::new();
 
     for (name, args, known_issue) in cases {
-        let golden_file = format!(
-            "{}/tests/sipcalc_golden/{}.txt",
-            env!("CARGO_MANIFEST_DIR"),
-            name
-        );
+        let golden_file = format!("{}/tests/sipcalc_golden/{}.txt", manifest_dir(), name);
 
         // Skip tests where we don't have golden files
         if !std::path::Path::new(&golden_file).exists() {

@@ -1,9 +1,16 @@
+use std::path::PathBuf;
 use std::process::Command;
 use std::str;
 
+/// Path to the ripcalc binary: cargo's target dir, overridable for Bazel.
+fn ripcalc_bin() -> PathBuf {
+    std::env::var_os("RIPCALC_BIN")
+        .map_or_else(|| PathBuf::from("./target/debug/ripcalc"), PathBuf::from)
+}
+
 #[test]
 fn test_basic_ipv4_calculation() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -22,7 +29,7 @@ fn test_basic_ipv4_calculation() {
 
 #[test]
 fn test_basic_ipv6_calculation() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["2001:db8::/48"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -40,7 +47,7 @@ fn test_basic_ipv6_calculation() {
 
 #[test]
 fn test_json_output() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["--json", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -58,7 +65,7 @@ fn test_json_output() {
 
 #[test]
 fn test_subnet_splitting() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-s", "26", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -75,7 +82,7 @@ fn test_subnet_splitting() {
 
 #[test]
 fn test_all_info_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-a", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -92,7 +99,7 @@ fn test_all_info_flag() {
 #[test]
 fn test_different_input_formats() {
     // Test dotted decimal netmask with explicit IPv4 flag
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-4", "192.168.1.5 255.255.255.0"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -102,7 +109,7 @@ fn test_different_input_formats() {
     assert!(stdout.contains("Network address\t\t- 192.168.1.0"));
 
     // Test hex netmask with explicit IPv4 flag
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-4", "10.0.0.1 0xFFFF0000"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -114,7 +121,7 @@ fn test_different_input_formats() {
 
 #[test]
 fn test_help_output() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["--help"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -132,7 +139,7 @@ fn test_help_output() {
 
 #[test]
 fn test_invalid_input_handling() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["invalid.ip.address"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -155,7 +162,7 @@ fn test_comprehensive_error_handling() {
     ];
 
     for (input, description) in error_cases {
-        let output = Command::new("./target/debug/ripcalc")
+        let output = Command::new(ripcalc_bin())
             .args([*input])
             .output()
             .expect("Failed to execute ripcalc");
@@ -177,7 +184,7 @@ fn test_comprehensive_error_handling() {
 
 #[test]
 fn test_multiple_inputs() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["192.168.1.0/24", "10.0.0.0/16"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -191,7 +198,7 @@ fn test_multiple_inputs() {
 
 #[test]
 fn test_ipv6_split_formatting() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-S", "65", "fdbb::1/64"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -208,7 +215,7 @@ fn test_ipv6_split_formatting() {
 #[test]
 fn test_extra_subnets() {
     // Test -n with positive number
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-n", "3", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -222,7 +229,7 @@ fn test_extra_subnets() {
     assert!(stdout.contains("192.168.3.0     - 192.168.3.255"));
 
     // Test -n 0 to show all subnets in containing /24
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-n", "0", "192.168.10.64/26"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -242,7 +249,7 @@ fn test_stdin_input() {
     use std::io::Write;
     use std::process::Stdio;
 
-    let mut child = Command::new("./target/debug/ripcalc")
+    let mut child = Command::new(ripcalc_bin())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -275,7 +282,7 @@ fn test_stdin_input() {
 
 #[test]
 fn test_cidr_bitmap_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-b", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -289,7 +296,7 @@ fn test_cidr_bitmap_flag() {
 
 #[test]
 fn test_classful_addr_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-c", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -303,7 +310,7 @@ fn test_classful_addr_flag() {
 
 #[test]
 fn test_wildcard_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-w", "0.0.0.255"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -317,7 +324,7 @@ fn test_wildcard_flag() {
 
 #[test]
 fn test_classful_bitmap_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-x", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -330,7 +337,7 @@ fn test_classful_bitmap_flag() {
 
 #[test]
 fn test_ipv6_v4inv6_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-e", "::ffff:192.168.1.1"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -341,7 +348,7 @@ fn test_ipv6_v4inv6_flag() {
 
 #[test]
 fn test_ipv6_reverse_dns_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-r", "2001:db8::1"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -357,7 +364,7 @@ fn test_ipv6_reverse_dns_flag() {
 
 #[test]
 fn test_ipv6_standard_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-t", "2001:db8::/48"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -370,7 +377,7 @@ fn test_ipv6_standard_flag() {
 
 #[test]
 fn test_verbose_split_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-u", "-s", "26", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -386,7 +393,7 @@ fn test_verbose_split_flag() {
 
 #[test]
 fn test_explicit_ipv4_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-4", "192.168.1.5 255.255.255.0"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -398,7 +405,7 @@ fn test_explicit_ipv4_flag() {
 
 #[test]
 fn test_explicit_ipv6_flag() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-6", "2001:db8::1/64"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -412,7 +419,7 @@ fn test_explicit_ipv6_flag() {
 
 #[test]
 fn test_multiple_ipv4_flags() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-b", "-c", "-x", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -425,7 +432,7 @@ fn test_multiple_ipv4_flags() {
 
 #[test]
 fn test_multiple_ipv6_flags() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-r", "-t", "2001:db8::1"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -437,7 +444,7 @@ fn test_multiple_ipv6_flags() {
 
 #[test]
 fn test_all_flag_with_ipv4() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-a", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -452,7 +459,7 @@ fn test_all_flag_with_ipv4() {
 
 #[test]
 fn test_all_flag_with_ipv6() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-a", "2001:db8::/48"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -466,7 +473,7 @@ fn test_all_flag_with_ipv6() {
 
 #[test]
 fn test_json_with_flags() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["--json", "-a", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -479,7 +486,7 @@ fn test_json_with_flags() {
 
 #[test]
 fn test_split_with_extra_subnets() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-s", "26", "-n", "2", "192.168.1.0/24"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -491,7 +498,7 @@ fn test_split_with_extra_subnets() {
 
 #[test]
 fn test_ipv6_split_with_flags() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-S", "65", "-r", "fdbb::1/64"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -505,7 +512,7 @@ fn test_ipv6_split_with_flags() {
 
 #[test]
 fn test_sipcalc_compatibility_version() {
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-v"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -518,7 +525,7 @@ fn test_sipcalc_compatibility_version() {
 #[test]
 fn test_interface_with_explicit_flag() {
     // Test explicit interface flag (may not work on all systems)
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-I", "lo"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -538,7 +545,7 @@ fn test_various_input_formats() {
     ];
 
     for (flag, input, description) in test_cases {
-        let output = Command::new("./target/debug/ripcalc")
+        let output = Command::new(ripcalc_bin())
             .args([flag, input])
             .output()
             .unwrap_or_else(|_| panic!("Failed to execute ripcalc for {description}"));
@@ -557,7 +564,7 @@ fn test_various_input_formats() {
 #[test]
 fn test_invalid_flag_combinations() {
     // These should still work but may produce warnings or unexpected output
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-4", "-6", "192.168.1.0/24"]) // conflicting explicit types
         .output()
         .expect("Failed to execute ripcalc");
@@ -577,7 +584,7 @@ fn test_comprehensive_flag_coverage() {
     ];
 
     for flag in all_flags {
-        let output = Command::new("./target/debug/ripcalc")
+        let output = Command::new(ripcalc_bin())
             .args(["--help"])
             .output()
             .expect("Failed to execute ripcalc --help");
@@ -599,7 +606,7 @@ fn test_resolve_flag() {
     // This feature enables DNS lookups for IP addresses
     // NOTE: Using localhost/127.0.0.1 to avoid CI environment DNS differences
     // In production, this should use mocking for deterministic testing
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-d", "127.0.0.1/8"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -624,7 +631,7 @@ fn test_long_format_flags() {
     ];
 
     for (args, expected) in test_cases {
-        let output = Command::new("./target/debug/ripcalc")
+        let output = Command::new(ripcalc_bin())
             .args(&args)
             .output()
             .unwrap_or_else(|_| panic!("Failed to execute ripcalc with args: {args:?}"));
@@ -640,7 +647,7 @@ fn test_long_format_flags() {
 #[test]
 fn test_hex_mask_without_prefix() {
     // Test hex mask in nnnnnnnn format (without 0x prefix)
-    let output = Command::new("./target/debug/ripcalc")
+    let output = Command::new(ripcalc_bin())
         .args(["-4", "10.0.0.1 FFFF0000"])
         .output()
         .expect("Failed to execute ripcalc");
@@ -661,7 +668,7 @@ fn test_boundary_values() {
     ];
 
     for (flag, input, description) in test_cases {
-        let output = Command::new("./target/debug/ripcalc")
+        let output = Command::new(ripcalc_bin())
             .args([flag, input])
             .output()
             .unwrap_or_else(|_| panic!("Failed to execute ripcalc for {description}"));
@@ -696,7 +703,7 @@ fn test_comprehensive_flag_combinations() {
     ];
 
     for (args, description) in test_cases {
-        let output = Command::new("./target/debug/ripcalc")
+        let output = Command::new(ripcalc_bin())
             .args(&args)
             .output()
             .unwrap_or_else(|_| panic!("Failed to execute ripcalc for {description}"));
