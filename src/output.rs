@@ -89,9 +89,7 @@ impl OutputFormatter {
         index: usize,
         config: &Config,
     ) -> Result<()> {
-        let mut addr_index = index;
-
-        for ip_addr in &resolved.addresses {
+        for (addr_index, ip_addr) in (index..).zip(resolved.addresses.iter()) {
             match ip_addr {
                 std::net::IpAddr::V4(ipv4) => {
                     // Use classful default for resolved addresses
@@ -132,7 +130,6 @@ impl OutputFormatter {
                     }
                 }
             }
-            addr_index += 1;
         }
 
         Ok(())

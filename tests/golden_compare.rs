@@ -132,8 +132,7 @@ fn transform_sipcalc_to_ripcalc(s: &str) -> String {
 
 /// Returns the crate directory (overridable so Bazel can point at runfiles).
 fn manifest_dir() -> String {
-    std::env::var("RIPCALC_MANIFEST_DIR")
-        .unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").to_string())
+    std::env::var("RIPCALC_MANIFEST_DIR").unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").to_string())
 }
 
 /// Returns the path to the ripcalc binary (assumes target/debug/ripcalc).
