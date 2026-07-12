@@ -1,0 +1,5 @@
+-[int-ipv4 : 10.0.0.1 0xFFFFFF00] - 0
+
+-[ERR : Unable to retrieve interface information]
+
+-

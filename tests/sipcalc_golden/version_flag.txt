@@ -1,0 +1,6 @@
+sipcalc 1.1.6
+Written by Simon Ekstrand.
+
+Copyright (C) 2003-2013 Simon Ekstrand.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

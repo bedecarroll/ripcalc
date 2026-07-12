@@ -1,0 +1,13 @@
+-[ipv6 : fdbb::1/64] - 0
+
+[IPV6 DNS]
+Reverse DNS (ip6.arpa)	-
+1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.b.b.d.f.ip6.arpa.
+
+[Split network]
+Network			- fdbb:0000:0000:0000:0000:0000:0000:0000 -
+			  fdbb:0000:0000:0000:7fff:ffff:ffff:ffff
+Network			- fdbb:0000:0000:0000:8000:0000:0000:0000 -
+			  fdbb:0000:0000:0000:ffff:ffff:ffff:ffff
+
+-

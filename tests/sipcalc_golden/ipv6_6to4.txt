@@ -1,0 +1,14 @@
+-[ipv6 : 2002::/16] - 0
+
+[IPV6 INFO]
+Expanded Address	- 2002:0000:0000:0000:0000:0000:0000:0000
+Compressed address	- 2002::
+Subnet prefix (masked)	- 2002:0:0:0:0:0:0:0/16
+Address ID (masked)	- 0:0:0:0:0:0:0:0/16
+Prefix address		- ffff:0:0:0:0:0:0:0
+Prefix length		- 16
+Address type		- Aggregatable Global Unicast Addresses
+Network range		- 2002:0000:0000:0000:0000:0000:0000:0000 -
+			  2002:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+
+-

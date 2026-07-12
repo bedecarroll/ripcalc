@@ -1,0 +1,3 @@
+[files]
+# Golden sipcalc output fixtures contain hex address strings.
+extend-exclude = ["tests/sipcalc_golden/"]
